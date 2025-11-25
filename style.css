@@ -1,0 +1,74 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f8f8f8;
+}
+
+header {
+  background: #fff;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+.logo {
+  height: 50px;
+}
+
+.btns button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #ddd;
+  margin-left: 8px;
+  font-weight: bold;
+}
+
+.login {
+  background: #ff6600;
+  color: #fff;
+}
+
+.top-banner {
+  text-align: center;
+  padding: 15px 0;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.matches {
+  padding: 10px;
+}
+
+.match-card {
+  background: #fff;
+  border-radius: 15px;
+  overflow: hidden;
+  margin-bottom: 18px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.card-img {
+  width: 100%;
+}
+
+.card-info {
+  padding: 15px;
+}
+
+.card-info h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.title {
+  text-align: center;
+  font-size: 28px;
+  margin: 20px 0 10px;
+}
+
+.live-box {
+  padding: 10px;
+}

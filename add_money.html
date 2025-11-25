@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Money</title>
+
+<style>
+body{
+  font-family: Arial;
+  background:#0a0a0a;
+  color:#fff;
+  margin:0;
+  padding:0;
+}
+.container{
+  max-width:480px;
+  margin:auto;
+  padding:20px;
+}
+
+.card{
+  background:#141414;
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 0 10px #000;
+}
+
+h2{
+  text-align:center;
+  margin-bottom:15px;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  border-radius:8px;
+  border:1px solid #333;
+  background:#1c1c1c;
+  color:white;
+  margin-top:10px;
+  font-size:16px;
+}
+
+.method-box{
+  display:flex;
+  justify-content:space-between;
+  margin-top:15px;
+}
+
+.method{
+  flex:1;
+  background:#222;
+  padding:12px;
+  margin:5px;
+  text-align:center;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:16px;
+  border:2px solid transparent;
+}
+
+.method.active{
+  border:2px solid #ff0066;
+}
+
+.button{
+  width:100%;
+  padding:14px;
+  background:#ff0066;
+  margin-top:15px;
+  border:none;
+  border-radius:10px;
+  font-size:18px;
+  font-weight:bold;
+  color:white;
+  cursor:pointer;
+}
+
+.copy-btn{
+  padding:10px;
+  background:#333;
+  border:none;
+  border-radius:8px;
+  margin-top:8px;
+  color:#fff;
+  width:100%;
+}
+
+.small{
+  font-size:14px;
+  opacity:0.8;
+  margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<div class="card">
+
+<h2>Add Money</h2>
+
+<!-- Amount -->
+<label>Amount</label>
+<input id="amount" type="number" placeholder="Enter Amount">
+
+<!-- Payment Method Tabs -->
+<div class="method-box">
+  <div id="bkashTab" class="method active" onclick="setMethod('bkash')">Bkash</div>
+  <div id="nagadTab" class="method" onclick="setMethod('nagad')">Nagad</div>
+</div>
+
+<!-- Payment Number -->
+<label>Send Money To</label>
+<input id="payNumber" readonly>
+
+<button class="copy-btn" onclick="copyNumber()">Copy Number</button>
+
+<!-- TxID -->
+<label>Transaction ID</label>
+<input id="txid" placeholder="Enter Transaction ID">
+
+<button class="button" onclick="submitPayment()">Submit Request</button>
+
+<p class="small">Admin review করবে এবং balance add হবে।</p>
+
+</div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ---------- Firebase Config ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+            authDomain: "noreply@post-c7e41.firebaseapp.com",
+            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+            projectId: "post-c7e41",
+            messagingSenderId: "758133068153",
+            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let method = "bkash"; 
+let numbers = { bkash:"", nagad:"" };
+
+// Load numbers
+db.collection("paymentNumbers").doc("bkash").get().then(d=>{
+  if(d.exists){ numbers.bkash = d.data().number; document.getElementById("payNumber").value = numbers.bkash; }
+});
+db.collection("paymentNumbers").doc("nagad").get().then(d=>{
+  if(d.exists){ numbers.nagad = d.data().number; }
+});
+
+// Change Method UI
+function setMethod(m){
+  method = m;
+
+  document.getElementById("bkashTab").classList.remove("active");
+  document.getElementById("nagadTab").classList.remove("active");
+  document.getElementById(m+"Tab").classList.add("active");
+
+  document.getElementById("payNumber").value = numbers[m];
+}
+
+// Copy number
+function copyNumber(){
+  navigator.clipboard.writeText(document.getElementById("payNumber").value);
+  alert("Copied!");
+}
+
+// Submit
+function submitPayment(){
+  let amount = document.getElementById("amount").value;
+  let txid = document.getElementById("txid").value;
+
+  if(amount < 10){
+    alert("Minimum 10 TK");
+    return;
+  }
+  if(txid.length < 6){
+    alert("Enter valid Transaction ID");
+    return;
+  }
+
+  db.collection("addMoney").add({
+    amount: amount,
+    method: method,
+    txid: txid,
+    number: numbers[method],
+    status: "pending",
+    time: new Date()
+  }).then(()=>{ 
+    alert("Request Submitted!");
+    window.location.href = "profile.html";
+  });
+}
+</script>
+
+</body>
+</html>

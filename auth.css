@@ -1,0 +1,103 @@
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #fafafa;
+}
+
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 10px;
+  background: white;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+.logo {
+  height: 45px;
+}
+
+.menu-btns button {
+  padding: 7px 16px;
+  background: #e6e6e6;
+  border: none;
+  margin-left: 6px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.login-btn {
+  background: #ff6a00;
+  color: white;
+}
+
+.container {
+  width: 92%;
+  background: white;
+  margin: 20px auto;
+  padding: 18px;
+  border-radius: 15px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+
+h2 {
+  font-size: 26px;
+}
+
+.sub {
+  margin-top: -10px;
+  color: gray;
+}
+
+input {
+  width: 100%;
+  padding: 15px;
+  margin-top: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+}
+
+.row2 {
+  display: flex;
+  gap: 10px;
+}
+
+.main-btn {
+  width: 100%;
+  margin-top: 18px;
+  padding: 15px;
+  background: #ff6a00;
+  border: none;
+  color: white;
+  font-size: 18px;
+  border-radius: 10px;
+}
+
+.or {
+  text-align: center;
+  margin: 15px 0;
+  color: gray;
+}
+
+.google-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background: #f2f2f2;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 17px;
+}
+
+.google-btn img {
+  width: 20px;
+}
+
+.bottom-text {
+  text-align: center;
+  margin-top: 18px;
+  font-weight: bold;
+}

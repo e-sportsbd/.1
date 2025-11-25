@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS Matches</title>
+
+<style>
+body { font-family: Arial; background: #0b0b0b; color: #fff; padding: 15px; }
+.matchBox {
+  background: #1c1c1c; padding: 15px; border-radius: 12px;
+  margin-bottom: 15px; border:1px solid #333;
+}
+.btn { background:#ffcc00; padding:10px; width:100%; border:none; margin-top:10px; border-radius:8px; font-weight:bold; }
+.detailsBtn { background:#0099ff; padding:10px; width:100%; border:none; margin-top:10px; border-radius:8px; font-weight:bold; }
+input, select { width:100%; padding:10px; border-radius:8px; border:1px solid #555; margin-bottom:10px; }
+.joinBox { background:#111; padding:10px; border-radius:8px; margin-top:10px; }
+
+.roomBox {
+  background:#101010;
+  padding: 12px;
+  border:1px solid #444;
+  margin-top:10px;
+  border-radius:10px;
+  display:none;
+}
+</style>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+            authDomain: "noreply@post-c7e41.firebaseapp.com",
+            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+            projectId: "post-c7e41",
+            messagingSenderId: "758133068153",
+            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const uid = localStorage.getItem("uid");
+let userBalance = 0;
+
+// Load User Balance
+db.collection("users").doc(uid).onSnapshot(u=>{
+  if(u.exists) userBalance = u.data().balance;
+});
+
+// ===============================
+// LOAD CS MATCHES
+// ===============================
+window.onload = function(){
+  db.collection("matches")
+  .where("category","==","cs")
+  .onSnapshot(ss=>{
+    document.getElementById("allMatches").innerHTML = "";
+    ss.forEach(doc=>{
+      let m = doc.data();
+      let joined = m.joined ? m.joined.length : 0;
+
+      document.getElementById("allMatches").innerHTML += `
+        <div class="matchBox" id="box_${doc.id}">
+          <h3>Match ID: ${doc.id}</h3>
+          <p>Entry Fee: ${m.entry}৳</p>
+          <p>Prize Pool: ${m.prize}৳</p>
+          <p>Match Time: ${m.time}</p>
+          <p>Slot: ${joined}/${m.slot}</p>
+
+          <select id="type_${doc.id}">
+            <option value="solo">Solo (1 Player)</option>
+            <option value="duo">Duo (2 Players)</option>
+            <option value="squad">Squad (4 Players)</option>
+          </select>
+
+          <div id="players_${doc.id}" class="joinBox">
+            <input type="text" placeholder="Player 1 Name">
+          </div>
+
+          <button class="btn" onclick="joinMatch('${doc.id}', ${m.entry}, ${m.slot})">JOIN NOW</button>
+
+          <button class="detailsBtn" onclick="toggleDetails('${doc.id}')">DETAILS</button>
+
+          <div class="roomBox" id="room_${doc.id}">
+            <p id="roomText_${doc.id}">Loading...</p>
+          </div>
+        </div>
+      `;
+
+      // live watch room ID / Pass
+      watchRoomChange(doc.id);
+    });
+  });
+};
+
+// ===============================
+// AUTO PLAYER INPUT
+// ===============================
+document.addEventListener("change", function(e){
+  if(e.target.tagName === "SELECT"){
+    let id = e.target.id.split("_")[1];
+    let type = e.target.value;
+
+    let box = document.getElementById("players_"+id);
+    box.innerHTML = "";
+
+    let count = type==="solo"?1 : type==="duo"?2 : 4;
+    for(let i=1;i<=count;i++){
+      box.innerHTML += `<input type="text" placeholder="Player ${i} Name">`;
+    }
+  }
+});
+
+// ===============================
+// JOIN MATCH
+// ===============================
+function joinMatch(id, entry, maxSlot){
+  db.collection("matches").doc(id).get().then(d=>{
+    let m = d.data();
+    let joined = m.joined ? m.joined.length : 0;
+
+    if(joined >= maxSlot){
+      alert("Slot Full!");
+      return;
+    }
+
+    let type = document.getElementById("type_"+id).value;
+    let playerBox = document.querySelectorAll(`#players_${id} input`);
+    let names = [];
+    playerBox.forEach(n=>names.push(n.value));
+
+    let need = entry * names.length;
+    if(userBalance < need){
+      alert("Balance কম আছে!");
+      return;
+    }
+
+    db.collection("users").doc(uid).update({
+      balance: userBalance - need
+    });
+
+    db.collection("matches").doc(id).update({
+      joined: firebase.firestore.FieldValue.arrayUnion({
+        uid: uid,
+        players: names,
+        type: type
+      })
+    });
+
+    alert("Match Joined!");
+  });
+}
+
+// ===============================
+// DETAILS SECTION TOGGLE
+// ===============================
+function toggleDetails(id){
+  let box = document.getElementById("room_"+id);
+  box.style.display = box.style.display === "none" ? "block" : "none";
+}
+
+// ===============================
+// LIVE WATCH ROOM ID / PASSWORD
+// ===============================
+function watchRoomChange(matchId){
+  db.collection("matches").doc(matchId).onSnapshot(d=>{
+    let m = d.data();
+
+    // USER JOINED CHECK
+    let isMember = false;
+    if(m.joined){
+      m.joined.forEach(j=>{
+        if(j.uid === uid) isMember = true;
+      });
+    }
+
+    let box = document.getElementById("roomText_"+matchId);
+
+    if(!isMember){
+      box.innerHTML = "আপনি এই ম্যাচে জয়েন করেননি!";
+      return;
+    }
+
+    if(m.roomId && m.roomPass){
+      box.innerHTML = `
+        <b>Room ID:</b> ${m.roomId}<br>
+        <b>Password:</b> ${m.roomPass}
+      `;
+
+      // --- SEND NOTIFICATION WHEN ADMIN ADDS ---
+      if(Notification.permission === "granted"){
+        new Notification("Room Details Added", {
+          body: `Match ${matchId}: Room ID & Password দেওয়া হয়েছে!`
+        });
+      }
+    } else {
+      box.innerHTML = "Admin এখনো Room ID & Password দেয়নি!";
+    }
+  });
+}
+
+// ===============================
+// ASK MOBILE NOTIFICATION PERMISSION
+// ===============================
+if(Notification.permission !== "granted"){
+  Notification.requestPermission();
+}
+</script>
+
+</head>
+<body>
+<h2>CS Matches</h2>
+<div id="allMatches"></div>
+</body>
+</html>

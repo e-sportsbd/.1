@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Withdraw</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .card {
+        width: 90%;
+        max-width: 350px;
+        background: #fff;
+        padding: 20px;
+        margin: 15px auto;
+        border-radius: 10px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        text-align: left;
+    }
+
+    input, select {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 12px;
+        background: #ff6000;
+        border: none;
+        color: white;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+    .btn:hover {
+        opacity: 0.9;
+    }
+
+    .statusBox {
+        text-align: center;
+        margin-top: 10px;
+        font-weight: bold;
+    }
+
+    .pending { color: orange; }
+    .approved { color: green; }
+    .rejected { color: red; }
+</style>
+
+</head>
+<body>
+
+<h2>Withdraw</h2>
+
+<div class="card">
+    <p>Available balance : <span id="balance">0</span> BDT</p>
+    <p style="color:red;">Minimum Withdraw : 100 BDT</p>
+
+    <input type="number" id="amount" placeholder="Amount">
+
+    <label>Payment Method</label>
+    <select id="method">
+        <option value="">Select Payment Method</option>
+        <option value="Bkash">Bkash</option>
+        <option value="Nagad">Nagad</option>
+        <option value="Rocket">Rocket</option>
+    </select>
+
+    <label>Number</label>
+    <input type="text" id="number" placeholder="Receiver Number">
+
+    <button class="btn" onclick="sendWithdraw()">Withdraw</button>
+
+    <div id="statusBox" class="statusBox"></div>
+</div>
+
+<script>
+// ---------------- Firebase Config ----------------
+const firebaseConfig = {
+    apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+            authDomain: "noreply@post-c7e41.firebaseapp.com",
+            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+            projectId: "post-c7e41",
+            messagingSenderId: "758133068153",
+            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+// ---------------- Get User UID ----------------
+let uid = localStorage.getItem("uid");
+if (!uid) {
+    alert("You are not logged in!");
+    window.location.href = "login.html";
+}
+
+// ---------------- Load User Balance ----------------
+db.ref("users/" + uid + "/balance").on("value", snap => {
+    document.getElementById("balance").innerText = snap.val() ?? 0;
+});
+
+// ---------------- Send Withdraw Request ----------------
+function sendWithdraw() {
+    let amount = document.getElementById("amount").value;
+    let method = document.getElementById("method").value;
+    let number = document.getElementById("number").value;
+
+    if (amount < 100) {
+        alert("Minimum withdraw 100 BDT");
+        return;
+    }
+    if (!method || !number) {
+        alert("Please fill all fields");
+        return;
+    }
+
+    let requestId = db.ref().push().key;
+
+    db.ref("withdrawRequests/" + uid + "/" + requestId).set({
+        amount,
+        method,
+        number,
+        status: "pending",
+        date: new Date().toLocaleString()
+    });
+
+    document.getElementById("statusBox").innerHTML =
+        '<span class="pending">Withdraw Request Submitted (Pending)</span>';
+
+    document.getElementById("amount").value = "";
+    document.getElementById("number").value = "";
+    document.getElementById("method").value = "";
+}
+
+// ---------------- Show Latest Withdraw Status ----------------
+db.ref("withdrawRequests/" + uid).limitToLast(1).on("value", snap => {
+    snap.forEach(child => {
+        let status = child.val().status;
+
+        if (status === "pending")
+            document.getElementById("statusBox").innerHTML = '<span class="pending">Pending</span>';
+
+        else if (status === "approved")
+            document.getElementById("statusBox").innerHTML = '<span class="approved">Approved</span>';
+
+        else if (status === "rejected")
+            document.getElementById("statusBox").innerHTML = '<span class="rejected">Rejected</span>';
+    });
+});
+function sendWithdraw() {
+    let amount = document.getElementById("amount").value;
+    let method = document.getElementById("method").value;
+    let number = document.getElementById("number").value;
+
+    if (amount < 100) {
+        alert("Minimum withdraw 100 BDT");
+        return;
+    }
+    if (!method || !number) {
+        alert("Please fill all fields");
+        return;
+    }
+
+    let requestId = db.ref().push().key;
+
+    db.ref("withdrawRequests/" + uid + "/" + requestId).set({
+        amount,
+        method,
+        number,
+        status: "pending",
+        date: new Date().toLocaleString()
+    });
+
+    // Redirect to Home Page
+    window.location.href = "home.html";
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RRR Esports - Login/Register</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+    body {
+        margin: 0;
+        background: #f5f5f5;
+        font-family: Arial, sans-serif;
+    }
+
+    header {
+        background: #fff;
+        padding: 10px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    header img { height: 45px; }
+
+    .top-btns button {
+        padding: 8px 18px;
+        border: none;
+        border-radius: 6px;
+        margin-left: 5px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .inactive { background: #f1f1f1; }
+    .active { background: #ff6b00; color: #fff; }
+
+    .box {
+        width: 90%;
+        max-width: 450px;
+        margin: 25px auto;
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 15px;
+    }
+
+    .btn-main {
+        width: 100%;
+        padding: 12px;
+        background: #ff6b00;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+    .or {
+        text-align: center;
+        margin: 15px 0;
+        color: gray;
+    }
+
+    .google-btn {
+        width: 100%;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid #ccc;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    .switch { text-align: center; margin-top: 15px; }
+    .switch span { color: #ff6b00; font-weight: bold; cursor: pointer; }
+
+    #registerPage { display: none; }
+</style>
+
+</head>
+<body>
+
+<header>
+    <img src="logo.png">
+    <div class="top-btns">
+        <button id="regBtn" class="inactive" onclick="openRegister()">Register</button>
+        <button id="logBtn" class="active" onclick="openLogin()">Login</button>
+    </div>
+</header>
+
+<!-- LOGIN PAGE -->
+<div class="box" id="loginPage">
+    <h2>Login</h2>
+
+    <input id="loginEmail" type="email" placeholder="Email">
+    <input id="loginPass" type="password" placeholder="Password">
+
+    <button class="btn-main" onclick="loginUser()">Sign In</button>
+
+    <div class="or">or</div>
+    <div class="google-btn">🔵 Sign in with Google</div>
+
+    <div class="switch">
+        New User? <span onclick="openRegister()">Register Now</span>
+    </div>
+</div>
+
+<!-- REGISTER PAGE -->
+<div class="box" id="registerPage">
+    <h2>Sign Up</h2>
+
+    <input id="name" type="text" placeholder="Your Name">
+    <input id="regEmail" type="email" placeholder="Your Email">
+    <input id="phone" type="text" placeholder="Your Phone Number">
+    <input id="regPass" type="password" placeholder="Password">
+    <input id="confirmPass" type="password" placeholder="Confirm Password">
+
+    <button class="btn-main" onclick="registerUser()">Sign Up</button>
+
+    <div class="or">or</div>
+    <div class="google-btn">🔵 Sign in with Google</div>
+
+    <div class="switch">
+        Already have an account? <span onclick="openLogin()">Login Now</span>
+    </div>
+</div>
+
+<script>
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+    apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+    authDomain: "post-c7e41.firebaseapp.com",
+    databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+    projectId: "post-c7e41",
+    storageBucket: "post-c7e41.appspot.com",
+    messagingSenderId: "758133068153",
+    appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+
+/* PAGE SWITCH */
+function openRegister() {
+    document.getElementById("loginPage").style.display = "none";
+    document.getElementById("registerPage").style.display = "block";
+
+    regBtn.classList.add("active");
+    regBtn.classList.remove("inactive");
+
+    logBtn.classList.add("inactive");
+    logBtn.classList.remove("active");
+}
+
+function openLogin() {
+    document.getElementById("registerPage").style.display = "none";
+    document.getElementById("loginPage").style.display = "block";
+
+    logBtn.classList.add("active");
+    logBtn.classList.remove("inactive");
+
+    regBtn.classList.add("inactive");
+    regBtn.classList.remove("active");
+}
+
+
+/* REGISTER USER */
+function registerUser() {
+
+    let username = document.getElementById("name").value;
+    let email = document.getElementById("regEmail").value;
+    let phone = document.getElementById("phone").value;
+    let pass = document.getElementById("regPass").value;
+    let cpass = document.getElementById("confirmPass").value;
+
+    if (!username || !email || !phone || !pass || !cpass) {
+        alert("Please fill all fields!");
+        return;
+    }
+
+    if (pass !== cpass) {
+        alert("Passwords do not match!");
+        return;
+    }
+
+    firebase.auth().createUserWithEmailAndPassword(email, pass)
+    .then(res => {
+        let uid = res.user.uid;
+
+        firebase.database().ref("users/" + uid).set({
+            name: username,
+            email: email,
+            phone: phone,
+            uid: uid,
+            balance: 0
+        })
+        .then(() => {
+            alert("Registration Successful!");
+            openLogin();
+        })
+        .catch(err => alert(err.message));
+
+    })
+    .catch(err => alert(err.message));
+}
+
+
+/* LOGIN USER */
+function loginUser() {
+
+    let email = document.getElementById("loginEmail").value;
+    let pass = document.getElementById("loginPass").value;
+
+    firebase.auth().signInWithEmailAndPassword(email, pass)
+    .then(() => {
+        alert("Login Successful!");
+        window.location.href = "home.html";
+    })
+    .catch(err => alert(err.message));
+}
+
+</script>
+
+</body>
+</html>

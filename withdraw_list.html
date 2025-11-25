@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Withdraw History</title>
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: #0d0d0d;
+        color: #fff;
+        font-family: "Poppins", sans-serif;
+    }
+
+    h2 {
+        text-align: center;
+        margin: 20px 0;
+    }
+
+    .container {
+        width: 92%;
+        max-width: 900px;
+        margin: auto;
+    }
+
+    .box {
+        background: #1a1a1a;
+        padding: 15px;
+        margin: 12px 0;
+        border-radius: 10px;
+        border-left: 4px solid #03a9f4;
+    }
+
+    .amount {
+        font-size: 20px;
+        font-weight: bold;
+        color: #03a9f4;
+    }
+
+    .status {
+        margin-top: 5px;
+        padding: 7px 12px;
+        border-radius: 8px;
+        display: inline-block;
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    .pending {
+        background: #ff9800;
+        color: #000;
+    }
+    .approved {
+        background: #4caf50;
+        color: #fff;
+    }
+    .rejected {
+        background: #f44336;
+        color: #fff;
+    }
+
+</style>
+</head>
+<body>
+
+<h2>Withdraw History</h2>
+
+<div class="container">
+    <div id="withdrawList">Loading...</div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+<script>
+
+    // 🔥 আপনার Firebase CONFIG বসিয়ে দিন
+    const firebaseConfig = {
+        apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+            authDomain: "noreply@post-c7e41.firebaseapp.com",
+            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+            projectId: "post-c7e41",
+            messagingSenderId: "758133068153",
+            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // ==========================
+    // LOAD USER WITHDRAW HISTORY
+    // ==========================
+    auth.onAuthStateChanged(user => {
+        if (!user) {
+            document.getElementById("withdrawList").innerHTML = "<p>Please login first</p>";
+            return;
+        }
+
+        loadHistory(user.uid);
+    });
+
+
+    function loadHistory(uid) {
+        db.collection("withdraw")
+            .where("uid", "==", uid)
+            .orderBy("time", "desc")
+            .onSnapshot(snapshot => {
+                const list = document.getElementById("withdrawList");
+                list.innerHTML = "";
+
+                if (snapshot.empty) {
+                    list.innerHTML = "<p>No Withdraw History Found</p>";
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const w = doc.data();
+                    let stClass = "pending";
+
+                    if (w.status === "Approved") stClass = "approved";
+                    else if (w.status === "Rejected") stClass = "rejected";
+
+                    let box = `
+                        <div class="box">
+                            <div class="amount">Amount: ${w.amount}৳</div>
+                            <div>Method: ${w.method}</div>
+                            <div>Number: ${w.number}</div>
+                            <div>Date: ${new Date(w.time).toLocaleString()}</div>
+
+                            <div class="status ${stClass}">
+                                ${w.status}
+                            </div>
+                        </div>
+                    `;
+
+                    list.innerHTML += box;
+                });
+            });
+    }
+
+</script>
+
+</body>
+</html>

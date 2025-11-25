@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Result</title>
+
+<style>
+body{background:#0b0b0b;color:#fff;font-family:Arial;padding:15px;}
+.card{
+  background:#1c1c1c;padding:15px;border-radius:12px;
+  margin-bottom:10px;border-left:4px solid #03a9f4;
+}
+h2{color:#03a9f4;text-align:center;}
+</style>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+// Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+            authDomain: "noreply@post-c7e41.firebaseapp.com",
+            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+            projectId: "post-c7e41",
+            messagingSenderId: "758133068153",
+            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let matchID = localStorage.getItem("match_id");
+
+window.onload = () => {
+  db.collection("matches").doc(matchID).onSnapshot(doc=>{
+    if(!doc.exists){
+      document.getElementById("res").innerHTML = "Match Not Found!";
+      return;
+    }
+
+    let m = doc.data();
+
+    if(!m.result){
+      document.getElementById("res").innerHTML = `
+        <h2>Result আসেনি</h2>
+      `;
+      return;
+    }
+
+    let r = m.result;
+
+    document.getElementById("res").innerHTML = `
+      <div class="card"><h2>${m.title}</h2></div>
+
+      <div class="card">
+        <h3>Winner: ${r.winner}</h3>
+      </div>
+
+      <div class="card">
+        <h3>MVP: ${r.mvp}</h3>
+      </div>
+
+      <div class="card">
+        <h3>Total Kill: ${r.kill}</h3>
+      </div>
+
+      <div class="card">
+        <h3>Position: ${r.position}</h3>
+      </div>
+
+      <div class="card">
+        <h3>Full Scoreboard:</h3>
+        <p>${r.score}</p>
+      </div>
+    `;
+  });
+}
+</script>
+</head>
+<body>
+
+<h2>Match Result</h2>
+<div id="res">Loading...</div>
+
+</body>
+</html>

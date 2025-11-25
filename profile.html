@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Profile</title>
+
+<!-- GOOGLE FONT -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+    body{
+        margin:0;
+        font-family:'Poppins',sans-serif;
+        background:#f5f5f5;
+    }
+    .header{
+        background:#fff;
+        padding:15px 20px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        box-shadow:0 2px 5px rgba(0,0,0,0.1);
+    }
+    .logo{
+        font-size:22px;
+        font-weight:600;
+        color:#ff4d00;
+    }
+    .balance-btn{
+        background:#ff6b00;
+        color:#fff;
+        padding:8px 15px;
+        border-radius:6px;
+        font-weight:600;
+    }
+
+    .banner{
+        width:100%;
+        height:140px;
+        background:linear-gradient(to right, #ff6600, #ffaa55);
+        border-radius:0 0 15px 15px;
+        position:relative;
+    }
+    .profile-icon{
+        width:90px;
+        height:90px;
+        border-radius:50%;
+        background:#fff;
+        position:absolute;
+        left:50%;
+        bottom:-45px;
+        transform:translateX(-50%);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:45px;
+        color:#444;
+        border:3px solid #fff;
+    }
+
+    .profile-box{
+        background:#fff;
+        margin:60px 12px 10px;
+        border-radius:10px;
+        padding:20px;
+        box-shadow:0 1px 5px rgba(0,0,0,0.1);
+    }
+
+    .verified{
+        display:flex;
+        align-items:center;
+        gap:6px;
+        color:#ff7b00;
+        font-weight:600;
+        margin-bottom:5px;
+    }
+
+    .info{
+        font-size:15px;
+        font-weight:500;
+    }
+    .info small{
+        font-size:12px;
+        color:gray;
+    }
+
+    .stats{
+        display:flex;
+        justify-content:space-between;
+        margin-top:20px;
+    }
+    .stat-box{
+        background:#f7f7f7;
+        padding:12px 10px;
+        width:30%;
+        text-align:center;
+        border-radius:8px;
+        font-weight:600;
+    }
+    .pin{
+        font-size:20px;
+        font-weight:700;
+    }
+
+    .transactions{
+        background:#fff;
+        margin:15px 12px;
+        padding:20px;
+        border-radius:10px;
+        box-shadow:0 1px 5px rgba(0,0,0,0.1);
+    }
+    .no-data{
+        text-align:center;
+        color:gray;
+        padding:15px 0;
+    }
+</style>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">E-Sports BD</div>
+    <div class="balance-btn" id="topBalance">0৳</div>
+</div>
+
+<div class="banner"></div>
+<div class="profile-icon">👤</div>
+
+<div class="profile-box">
+    <div class="verified">✔ Verified</div>
+
+    <div class="info">
+        <div id="userName">Loading...</div>
+        <small id="userEmail"></small><br>
+        <small id="joinDate"></small>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box">
+            Current Balance<br>
+            <span id="currentBalance">0৳</span>
+        </div>
+        <div class="stat-box">
+            Earn Balance<br>
+            <span id="earnBalance">0৳</span>
+        </div>
+        <div class="stat-box">
+            Support PIN<br>
+            <span class="pin" id="supportPin">000000</span>
+        </div>
+    </div>
+</div>
+
+<div class="transactions">
+    <h3>Recent Transactions</h3>
+    <div class="no-data">No order data found!</div>
+</div>
+
+
+<script>
+    // --------- YOUR FIREBASE CONFIG (CHANGE THIS) ----------
+    const firebaseConfig = {
+        apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+            authDomain: "noreply@post-c7e41.firebaseapp.com",
+            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+            projectId: "post-c7e41",
+            messagingSenderId: "758133068153",
+            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // --------- Load User Data ----------
+    const uid = localStorage.getItem("uid");  // user login theke asbe
+
+    db.collection("users").doc(uid).onSnapshot(doc => {
+        const data = doc.data();
+
+        document.getElementById("userName").innerText = data.name;
+        document.getElementById("userEmail").innerText = data.email;
+        document.getElementById("joinDate").innerText = "Joined on " + data.joinDate;
+
+        document.getElementById("currentBalance").innerText = data.balance + "৳";
+        document.getElementById("earnBalance").innerText = data.earn + "৳";
+
+        document.getElementById("supportPin").innerText = data.supportPin;
+        document.getElementById("topBalance").innerText = data.balance + "৳";
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-sports BB</title>
+
+  <!-- GOOGLE FONT -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <!-- ========== CSS ========== -->
+  <style>
+    body{
+      margin:0;
+      font-family: 'Poppins', sans-serif;
+      background:#0d0d0d;
+      color:white;
+    }
+
+    /* HEADER */
+    header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px 18px;
+      background:#111;
+      border-bottom:1px solid #222;
+      position:sticky;
+      top:0;
+      z-index:200;
+    }
+
+    .logo{
+      height:45px;
+    }
+
+    .menu-icon{
+      font-size:28px;
+      cursor:pointer;
+      color:white;
+    }
+
+    /* DRAWER MENU */
+    .drawer{
+      width:260px;
+      height:100%;
+      background:#fff;
+      color:#222;
+      position:fixed;
+      top:0;
+      left:-260px;
+      transition:0.3s;
+      z-index:300;
+      padding:20px 0;
+      overflow-y:auto;
+      border-right:1px solid #ddd;
+    }
+
+    .drawer.open{
+      left:0;
+    }
+
+    .close-btn{
+      text-align:right;
+      padding:0 20px 10px 0;
+      font-size:26px;
+      cursor:pointer;
+      color:#444;
+    }
+
+    .user-box{
+      text-align:center;
+      padding:10px 0;
+    }
+    .user-box img{
+      width:70px;
+      height:70px;
+      border-radius:50%;
+      background:#ddd;
+    }
+    .user-box h3{
+      margin:5px 0 0;
+      font-size:18px;
+      color:#111;
+    }
+    .user-box p{
+      margin:0;
+      color:#666;
+      font-size:13px;
+    }
+
+    .menu-item{
+      padding:12px 20px;
+      font-size:17px;
+      border-bottom:1px solid #eee;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color:#222;
+      transition:0.2s;
+    }
+    .menu-item:hover{
+      background:#f5f5f5;
+    }
+
+    /* BANNER SLIDER */
+    .banner-container{
+      width:100%;
+      height:200px;
+      overflow:hidden;
+      position:relative;
+    }
+    .banner-container img{
+      width:100%;
+      height:200px;
+      object-fit:cover;
+      position:absolute;
+      opacity:0;
+      transition:opacity 1s linear;
+    }
+    .banner-container img.active{
+      opacity:1;
+    }
+
+    /* Titles */
+    .title{
+      padding:10px 15px;
+      font-size:20px;
+      font-weight:600;
+      color:#ffcb4c;
+      margin-top:10px;
+    }
+
+    /* Match cards */
+    .matches{
+      padding:10px;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .match-card{
+      background:#1a1a1a;
+      border-radius:10px;
+      overflow:hidden;
+      cursor:pointer;
+      transition:0.3s;
+      border:1px solid #222;
+    }
+
+    .match-card:hover{
+      transform:translateY(-4px);
+      box-shadow:0px 4px 10px #000;
+    }
+
+    .match-card img{
+      width:100%;
+      height:120px;
+      object-fit:cover;
+    }
+
+    .card-info{
+      padding:8px;
+    }
+    .card-info h3{
+      margin:0;
+      color:#ffc93c;
+      font-size:16px;
+    }
+    .card-info p{
+      margin:3px 0 0;
+      color:#aaa;
+      font-size:13px;
+    }
+  </style>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+</head>
+<body>
+
+  <!-- DRAWER MENU -->
+  <div class="drawer" id="drawer">
+    <div class="close-btn" onclick="toggleDrawer()">✖</div>
+
+    <div class="user-box">
+      <img src="https://i.ibb.co.com/Cpw10NG0/download-19-2.webp">
+      <h3 id="userName">Guest User</h3>
+      <p id="userEmail">example@gmail.com</p>
+    </div>
+
+    <div class="menu-item" onclick="openPage('home.html')">🏠 Home</div>
+    <div class="menu-item" onclick="openPage('profile.html')">👤 My Account</div>
+    <div class="menu-item" onclick="openPage('match.html')">🎮 Match Results</div>
+    <div class="menu-item" onclick="openPage('add_money.html')">➕ Add Money</div>
+    <div class="menu-item" onclick="openPage('withdraw.html')">➖ Withdraw Money</div>
+    <div class="menu-item" onclick="openPage('withdraw_list.html')">📄 Withdraw List</div>
+    <div class="menu-item" onclick="openPage('support.html')">⚙ Support</div>
+
+    <div class="menu-item" style="color:red;" onclick="logout()">🚪 Logout</div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <img src="logo.png" class="logo">
+    <div class="menu-icon" onclick="toggleDrawer()">☰</div>
+  </header>
+
+  <!-- ========== BANNER SLIDER ========== -->
+  <div class="banner-container">
+    <img src="banner1.jpg" class="active">
+    <img src="banner2.jpg">
+    <img src="banner3.jpg">
+    <img src="banner4.jpg">
+  </div>
+
+  <h2 class="title">Free Fire Matches</h2>
+
+  <!-- MATCH LIST -->
+  <section class="matches">
+    <div class="match-card" onclick="openPage('bermuda.html')">
+      <img src="https://i.ibb.co.com/xST7gd3x/b4616f34-8e1f-4eb3-a984-5672af21b713.webp">
+      <div class="card-info">
+        <h3>BERMUDA MATCH</h3>
+        <p id="classic_count">0 Matches</p>
+      </div>
+    </div>
+
+    <div class="match-card" onclick="openPage('cs.html')">
+      <img src="https://i.ibb.co.com/gMSdZH3V/751-Garena-Free-Fire-Clash-Squad-Guide.webp">
+      <div class="card-info">
+        <h3>CLASH SQUAD</h3>
+        <p id="clash_count">0 Matches</p>
+      </div>
+    </div>
+
+    <div class="match-card" onclick="openPage('lw.html')">
+      <img src="https://i.ibb.co.com/cj1q1Vz/Win-every-lone-wolf-Lone-wolf-ranked-tips-and-tricks-Lone-wolf-free-fire.webp">
+      <div class="card-info">
+        <h3>LONE WOLF</h3>
+        <p id="wolf_count">0 Matches</p>
+      </div>
+    </div>
+  </section>
+
+  <h2 class="title">Ludu Matches</h2>
+  <section class="matches">
+    <div class="match-card" onclick="openPage('ludu.html')">
+      <img src="https://i.ibb.co.com/QvY2SLXM/unnamed.webp">
+      <div class="card-info">
+        <h3>LUDU MATCH</h3>
+        <p id="ludu_count">0 Matches</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- SCRIPT -->
+  <script>
+    /* FIREBASE CONFIG */
+    const firebaseConfig = {
+      apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+            authDomain: "noreply@post-c7e41.firebaseapp.com",
+            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+            projectId: "post-c7e41",
+            messagingSenderId: "758133068153",
+            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    /* DRAWER TOGGLE */
+    function toggleDrawer(){
+      document.getElementById("drawer").classList.toggle("open");
+    }
+
+    function openPage(p){ window.location.href = p; }
+
+    function logout(){
+      alert("Logged out!");
+    }
+
+    /* BANNER SLIDER */
+    let index = 0;
+    const banners = document.querySelectorAll(".banner-container img");
+
+    setInterval(() => {
+      banners[index].classList.remove("active");
+      index = (index + 1) % banners.length;
+      banners[index].classList.add("active");
+    }, 2500);
+
+
+    /* MATCH COUNT */
+    function loadCounts(){
+      db.collection("matches").doc("classic").get().then(d=>{
+        if(d.exists) document.getElementById("classic_count").innerText = d.data().count + " Matches";
+      });
+
+      db.collection("matches").doc("clash").get().then(d=>{
+        if(d.exists) document.getElementById("clash_count").innerText = d.data().count + " Matches";
+      });
+
+      db.collection("matches").doc("wolf").get().then(d=>{
+        if(d.exists) document.getElementById("wolf_count").innerText = d.data().count + " Matches";
+      });
+
+      db.collection("matches").doc("ludu").get().then(d=>{
+        if(d.exists) document.getElementById("ludu_count").innerText = d.data().count + " Matches";
+      });
+    }
+
+    loadCounts();
+  </script>
+
+</body>
+</html>
