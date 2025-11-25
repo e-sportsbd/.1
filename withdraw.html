@@ -96,11 +96,12 @@
 // ---------------- Firebase Config ----------------
 const firebaseConfig = {
     apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
-            authDomain: "noreply@post-c7e41.firebaseapp.com",
-            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
-            projectId: "post-c7e41",
-            messagingSenderId: "758133068153",
-            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+    authDomain: "post-c7e41.firebaseapp.com",
+    databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+    projectId: "post-c7e41",
+    storageBucket: "post-c7e41.appspot.com",
+    messagingSenderId: "758133068153",
+    appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -119,7 +120,7 @@ db.ref("users/" + uid + "/balance").on("value", snap => {
     document.getElementById("balance").innerText = snap.val() ?? 0;
 });
 
-// ---------------- Send Withdraw Request ----------------
+// ---------------- Send Withdraw Request (FIXED) ----------------
 function sendWithdraw() {
     let amount = document.getElementById("amount").value;
     let method = document.getElementById("method").value;
@@ -147,13 +148,21 @@ function sendWithdraw() {
     document.getElementById("statusBox").innerHTML =
         '<span class="pending">Withdraw Request Submitted (Pending)</span>';
 
+    // Clear fields
     document.getElementById("amount").value = "";
     document.getElementById("number").value = "";
     document.getElementById("method").value = "";
+
+    // Redirect to Home Page
+    setTimeout(() => {
+        window.location.href = "home.html";
+    }, 800);
 }
 
 // ---------------- Show Latest Withdraw Status ----------------
-db.ref("withdrawRequests/" + uid).limitToLast(1).on("value", snap => {
+db.ref("withdrawRequests/" + uid)
+  .limitToLast(1)
+  .on("value", snap => {
     snap.forEach(child => {
         let status = child.val().status;
 
@@ -167,34 +176,6 @@ db.ref("withdrawRequests/" + uid).limitToLast(1).on("value", snap => {
             document.getElementById("statusBox").innerHTML = '<span class="rejected">Rejected</span>';
     });
 });
-function sendWithdraw() {
-    let amount = document.getElementById("amount").value;
-    let method = document.getElementById("method").value;
-    let number = document.getElementById("number").value;
-
-    if (amount < 100) {
-        alert("Minimum withdraw 100 BDT");
-        return;
-    }
-    if (!method || !number) {
-        alert("Please fill all fields");
-        return;
-    }
-
-    let requestId = db.ref().push().key;
-
-    db.ref("withdrawRequests/" + uid + "/" + requestId).set({
-        amount,
-        method,
-        number,
-        status: "pending",
-        date: new Date().toLocaleString()
-    });
-
-    // Redirect to Home Page
-    window.location.href = "home.html";
-}
-
 </script>
 
 </body>
