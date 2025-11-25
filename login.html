@@ -32,6 +32,7 @@ button{
 
 <body>
 
+<!-- -------- LOGIN PAGE -------- -->
 <div id="loginPage" class="container">
     <h2>Login</h2>
 
@@ -43,6 +44,7 @@ button{
     <div class="link" onclick="openRegister()">Create New Account</div>
 </div>
 
+<!-- -------- REGISTER PAGE -------- -->
 <div id="registerPage" class="container" style="display:none;">
     <h2>Register</h2>
 
@@ -61,14 +63,15 @@ button{
 const firebaseConfig = {
   apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
   authDomain: "post-c7e41.firebaseapp.com",
+  databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com/",
   projectId: "post-c7e41",
-  storageBucket: "post-c7e41.appspot.com",
   messagingSenderId: "758133068153",
   appId: "1:758133068153:web:5513a1de83491c81776084"
 };
+
 firebase.initializeApp(firebaseConfig);
 
-// ---------- UI Toggle ----------
+// ---------- Page Toggle ----------
 function openRegister(){
     document.getElementById("loginPage").style.display="none";
     document.getElementById("registerPage").style.display="block";
@@ -78,48 +81,48 @@ function openLogin(){
     document.getElementById("loginPage").style.display="block";
 }
 
-// ---------- Register ----------
+// ---------- Register User ----------
 function registerUser(){
     let name = document.getElementById("regName").value;
     let email = document.getElementById("regEmail").value;
     let phone = document.getElementById("regPhone").value;
     let pass = document.getElementById("regPass").value;
 
+    if(name=="" || email=="" || phone=="" || pass=="")
+        return alert("All fields required!");
+
     firebase.auth().createUserWithEmailAndPassword(email, pass)
     .then(res => {
-
         let uid = res.user.uid;
-        localStorage.setItem("uid", uid);   // SAVE UID
 
-        firebase.database().ref("users/"+uid).set({
-            name:name,
-            email:email,
-            phone:phone,
-            balance:0,
-            uid:uid
+        firebase.database().ref("users").child(uid).set({
+            name: name,
+            email: email,
+            phone: phone,
+            balance: 0,
+            uid: uid
+        }).then(() => {
+            alert("Registration Successful!");
+            window.location.href = "home.html";
         });
-
-        alert("Registration successful!");
-        window.location.href="home.html";
 
     })
     .catch(err => alert(err.message));
 }
 
-// ---------- Login ----------
+// ---------- Login User ----------
 function loginUser(){
     let email = document.getElementById("loginEmail").value;
     let pass = document.getElementById("loginPass").value;
 
     firebase.auth().signInWithEmailAndPassword(email, pass)
     .then(res => {
-
         let uid = res.user.uid;
-        localStorage.setItem("uid", uid);   // SAVE UID
+
+        localStorage.setItem("uid", uid);
 
         alert("Login Successful!");
-        window.location.href="home.html";
-
+        window.location.href = "home.html";
     })
     .catch(err => alert(err.message));
 }

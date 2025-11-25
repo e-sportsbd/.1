@@ -5,211 +5,252 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lone Wolf Matches</title>
 
-<style>
-body { font-family: Arial; background: #0b0b0b; color: #fff; padding: 15px; }
-.matchBox {
-  background: #1c1c1c; padding: 15px; border-radius: 12px;
-  margin-bottom: 15px; border:1px solid #333;
-}
-.btn { background:#ffcc00; padding:10px; width:100%; border:none; margin-top:10px; border-radius:8px; font-weight:bold; }
-.detailsBtn { background:#0099ff; padding:10px; width:100%; border:none; margin-top:10px; border-radius:8px; font-weight:bold; }
-input, select { width:100%; padding:10px; border-radius:8px; border:1px solid #555; margin-bottom:10px; }
-.joinBox { background:#111; padding:10px; border-radius:8px; margin-top:10px; }
-
-.roomBox {
-  background:#101010;
-  padding: 12px;
-  border:1px solid #444;
-  margin-top:10px;
-  border-radius:10px;
-  display:none;
-}
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
+<style>
+body {margin:0;padding:18px;font-family:'Poppins',sans-serif;background:#f3f3f3;}
+.balance-bar {background:#fff;padding:16px;border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,0.08);font-size:18px;font-weight:700;margin-bottom:15px;}
+h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
+.match-card{background:#fff;padding:18px;border-radius:18px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:22px;}
+.match-title{font-size:22px;font-weight:700;margin-bottom:4px;}
+.match-time{font-size:13px;color:#666;margin-bottom:18px;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.info-item{background:#fafafa;padding:12px;border-radius:14px;font-size:14px;border:1px solid #eee;}
+.label{font-size:12px;color:#888;}
+.progress-text{font-size:13px;margin:10px 0;}
+.progress-bar{background:#e2e2e2;height:11px;border-radius:20px;width:100%;overflow:hidden;}
+.progress-inner{height:100%;background:orange;}
+.join-btn,.details-btn{width:100%;padding:13px;border-radius:14px;font-weight:700;border:none;margin-top:12px;font-size:16px;}
+.join-btn{background:orange;color:white;}
+.joined-btn{background:#27ae60;color:white;}
+.deposit-btn{background:#e74c3c;color:white;}
+.details-btn{background:#4a6cf7;color:white;}
+
+.popup-bg{position:fixed;left:0;top:0;width:100%;height:100%;backdrop-filter:blur(3px);background:rgba(0,0,0,0.6);display:none;justify-content:center;align-items:center;z-index:20;}
+.popup-box{width:92%;background:white;padding:20px;border-radius:20px;max-width:420px;}
+.popup-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:20px;}
+.popup-join{width:100%;padding:13px;background:orange;color:white;border-radius:14px;font-weight:700;border:none;}
+.popup-cancel{width:100%;padding:13px;background:#ccc;border-radius:14px;border:none;margin-top:10px;font-weight:700;}
+.room-info{font-size:16px;margin-top:10px;text-align:center;}
+</style>
+</head>
+
+<body>
+
+<div class="balance-bar">
+    Balance: <span id="balance">0</span> ৳
+</div>
+
+<h2>Lone Wolf Matches</h2>
+
+<div id="matchContainer"></div>
+
+
+<!-- JOIN POPUP -->
+<div id="joinPopup" class="popup-bg">
+    <div class="popup-box">
+        <div class="popup-title" id="popupTitle">Join Match</div>
+
+        <div id="playerFields" style="text-align:center; font-size:16px;"></div>
+
+        <button class="popup-join" onclick="submitJoin()">Join</button>
+        <button class="popup-cancel" onclick="closePopup()">Cancel</button>
+    </div>
+</div>
+
+
+<!-- DETAILS POPUP -->
+<div id="detailsPopup" class="popup-bg">
+    <div class="popup-box">
+        <div class="popup-title">Match Details</div>
+        <div id="detailsContent" class="room-info"></div>
+        <button class="popup-cancel" onclick="closeDetails()">Close</button>
+    </div>
+</div>
+
+
 <script>
+/* FIREBASE CONFIG */
 const firebaseConfig = {
-  apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
-            authDomain: "noreply@post-c7e41.firebaseapp.com",
-            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
-            projectId: "post-c7e41",
-            messagingSenderId: "758133068153",
-            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+    apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+    authDomain: "noreply@post-c7e41.firebaseapp.com",
+    projectId: "post-c7e41",
+    messagingSenderId: "758133068153",
+    appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
 };
-
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
 
-const uid = localStorage.getItem("uid");
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+let userId = "";
 let userBalance = 0;
 
-// Load Balance
-db.collection("users").doc(uid).onSnapshot(u=>{
-  if(u.exists) userBalance = u.data().balance;
+let currentMatchId = "";
+let currentEntryFee = 0;
+let currentPlayerCount = 1;
+
+
+/* AUTH CHECK */
+auth.onAuthStateChanged(async user => {
+    if (!user) return alert("Please Login!");
+    userId = user.uid;
+
+    // Balance load হলে UI refresh হবে
+    db.collection("users").doc(userId).onSnapshot(u => {
+        userBalance = u.data().balance || 0;
+        balance.innerText = userBalance;
+
+        // FIX — এখন balance আসার পরে matches রি-লোড হবে
+        loadMatches();
+    });
 });
 
-// =====================================
-// LOAD LONEWOLF MATCHES
-// =====================================
-window.onload = function(){
-  db.collection("matches")
-  .where("category","==","lonewolf")
-  .onSnapshot(ss=>{
-    document.getElementById("allMatches").innerHTML = "";
-    ss.forEach(doc=>{
-      let m = doc.data();
-      let joined = m.joined ? m.joined.length : 0;
 
-      document.getElementById("allMatches").innerHTML += `
-        <div class="matchBox" id="box_${doc.id}">
-          <h3>Match ID: ${doc.id}</h3>
-          <p>Entry Fee: ${m.entry}৳</p>
-          <p>Prize Pool: ${m.prize}৳</p>
-          <p>Match Time: ${m.time}</p>
-          <p>Slot: ${joined}/${m.slot}</p>
+/* LOAD MATCHES */
+function loadMatches() {
+    db.collection("lonewolf_matches")
+        .orderBy("createdAt", "desc")
+        .onSnapshot(snapshot => {
+            let html = "";
 
-          <select id="type_${doc.id}">
-            <option value="solo">Solo (1 Player)</option>
-            <option value="duo">Duo (2 Players)</option>
-          </select>
+            snapshot.forEach(doc => {
+                let m = doc.data();
 
-          <div id="players_${doc.id}" class="joinBox">
-            <input type="text" placeholder="Player 1 Name">
-          </div>
+                let joined = 0;
+                if (m.joinedPlayers) {
+                    m.joinedPlayers.forEach(p => joined += (p.players || 1));
+                }
 
-          <button class="btn" onclick="joinMatch('${doc.id}', ${m.entry}, ${m.slot})">JOIN NOW</button>
+                let left = m.slotCount - joined;
+                if (left < 0) left = 0;
 
-          <button class="detailsBtn" onclick="toggleDetails('${doc.id}')">DETAILS</button>
+                let percent = (joined / m.slotCount) * 100;
+                if (percent > 100) percent = 100;
 
-          <div class="roomBox" id="room_${doc.id}">
-            <p id="roomText_${doc.id}">Loading...</p>
-          </div>
-        </div>
-      `;
+                let alreadyJoined = m.joinedPlayers?.some(x => x.uid === userId);
 
-      watchRoomChange(doc.id);
-    });
-  });
-};
+                let btnHTML = "";
 
-// =====================================
-// AUTO PLAYER INPUT UPDATE
-// =====================================
-document.addEventListener("change", function(e){
-  if(e.target.tagName === "SELECT"){
-    let id = e.target.id.split("_")[1];
-    let type = e.target.value;
+                if (alreadyJoined) {
+                    btnHTML = `<button class="joined-btn" disabled>✔ Joined</button>`;
+                } 
+                else if (left <= 0) {
+                    btnHTML = `<button class="joined-btn" disabled>Slot Full</button>`;
+                }
+                else if (userBalance < m.entryFee) {
+                    btnHTML = `<button class="deposit-btn" onclick="location.href='deposit.html'">Deposit</button>`;
+                } 
+                else {
+                    btnHTML = `<button class="join-btn" onclick="openPopup('${doc.id}', ${m.entryFee}, '${m.matchType}')">Join</button>`;
+                }
 
-    let box = document.getElementById("players_"+id);
-    box.innerHTML = "";
+                html += `
+                <div class="match-card">
+                    <div class="match-title">${m.matchType} Match</div>
+                    <div class="match-time">${m.matchTime}</div>
 
-    let count = type==="solo"?1 : 2;
-    for(let i=1;i<=count;i++){
-      box.innerHTML += `<input type="text" placeholder="Player ${i} Name">`;
-    }
-  }
-});
+                    <div class="info-grid">
+                        <div class="info-item"><span class="label">Entry:</span> ${m.entryFee}</div>
+                        <div class="info-item"><span class="label">Prize:</span> ${m.prizePool}</div>
+                        <div class="info-item"><span class="label">Map:</span> ${m.map}</div>
+                        <div class="info-item"><span class="label">Slots:</span> ${joined}/${m.slotCount}</div>
+                    </div>
 
-// =====================================
-// JOIN MATCH
-// =====================================
-function joinMatch(id, entry, maxSlot){
-  db.collection("matches").doc(id).get().then(d=>{
-    let m = d.data();
-    let joined = m.joined ? m.joined.length : 0;
+                    <div class="progress-text">${joined} Joined — ${left} Left</div>
 
-    if(joined >= maxSlot){
-      alert("Slot Full!");
-      return;
-    }
+                    <div class="progress-bar"><div class="progress-inner" style="width:${percent}%"></div></div>
 
-    let type = document.getElementById("type_"+id).value;
-    let playerBox = document.querySelectorAll(`#players_${id} input`);
-    let names = [];
-    playerBox.forEach(n=>names.push(n.value));
+                    ${btnHTML}
+                    <button class="details-btn" onclick="openDetails('${doc.id}')">Details</button>
+                </div>`;
+            });
 
-    let need = entry * names.length;
-    if(userBalance < need){
-      alert("Balance কম আছে!");
-      return;
-    }
-
-    db.collection("users").doc(uid).update({
-      balance: userBalance - need
-    });
-
-    db.collection("matches").doc(id).update({
-      joined: firebase.firestore.FieldValue.arrayUnion({
-        uid: uid, players: names, type: type
-      })
-    });
-
-    alert("Match Joined!");
-  });
-}
-
-// =====================================
-// SHOW/HIDE DETAILS BUTTON
-// =====================================
-function toggleDetails(id){
-  let box = document.getElementById("room_"+id);
-  box.style.display = box.style.display === "none" ? "block" : "none";
-}
-
-// =====================================
-// LIVE ROOM ID & PASSWORD WATCHER
-// =====================================
-function watchRoomChange(matchId){
-  db.collection("matches").doc(matchId).onSnapshot(d=>{
-    let m = d.data();
-
-    let isJoined = false;
-    if(m.joined){
-      m.joined.forEach(j=>{
-        if(j.uid === uid) isJoined = true;
-      });
-    }
-
-    let box = document.getElementById("roomText_"+matchId);
-
-    if(!isJoined){
-      box.innerHTML = "আপনি এই ম্যাচে জয়েন করেননি!";
-      return;
-    }
-
-    if(m.roomId && m.roomPass){
-      box.innerHTML = `
-        <b>Room ID:</b> ${m.roomId}<br>
-        <b>Password:</b> ${m.roomPass}
-      `;
-
-      // Send notification
-      if(Notification.permission === "granted"){
-        new Notification("Room Info Added", {
-          body: `Match ${matchId}: Room ID & Password দেওয়া হয়েছে!`
+            matchContainer.innerHTML = html;
         });
-      }
-
-    } else {
-      box.innerHTML = "Admin এখনো Room ID & Password দেয়নি!";
-    }
-  });
 }
 
-// =====================================
-// ASK FOR NOTIFICATION PERMISSION
-// =====================================
-if(Notification.permission !== "granted"){
-  Notification.requestPermission();
+
+/* POPUP OPEN */
+function openPopup(id, fee, type) {
+    currentMatchId = id;
+    currentEntryFee = fee;
+    currentPlayerCount = (type === "Duo") ? 2 : 1;
+
+    playerFields.innerHTML = `Players: <b>${currentPlayerCount}</b>`;
+    popupTitle.innerText = `${type} Join`;
+    joinPopup.style.display = "flex";
+}
+
+function closePopup() {
+    joinPopup.style.display = "none";
+}
+
+
+/* JOIN MATCH */
+async function submitJoin() {
+    let docCheck = await db.collection("lonewolf_matches").doc(currentMatchId).get();
+    let m = docCheck.data();
+
+    if (m.joinedPlayers?.some(j => j.uid === userId)) {
+        alert("আপনি ইতিমধ্যে Join করেছেন!");
+        return closePopup();
+    }
+
+    let totalFee = currentEntryFee * currentPlayerCount;
+
+    if (userBalance < totalFee) return alert("Balance কম!");
+
+    // balance কমানো
+    await db.collection("users").doc(userId).update({
+        balance: userBalance - totalFee
+    });
+
+    // joined add করা
+    await db.collection("lonewolf_matches").doc(currentMatchId).update({
+        joinedPlayers: firebase.firestore.FieldValue.arrayUnion({
+            uid: userId,
+            players: currentPlayerCount,
+            time: Date.now()
+        })
+    });
+
+    alert("Successfully Joined!");
+    closePopup();
+}
+
+
+/* DETAILS */
+function closeDetails() {
+    detailsPopup.style.display = "none";
+}
+
+async function openDetails(id) {
+    detailsPopup.style.display = "flex";
+    detailsContent.innerHTML = "Loading...";
+
+    let doc = await db.collection("lonewolf_matches").doc(id).get();
+    let m = doc.data();
+
+    let joined = m.joinedPlayers?.some(j => j.uid === userId);
+
+    if (!joined) {
+        detailsContent.innerHTML =
+            "<b style='color:red;'>❌ আপনি এই ম্যাচে Join করেননি!</b>";
+        return;
+    }
+
+    detailsContent.innerHTML = `
+        <b>Room ID:</b> ${m.roomId || "Not added"} <br>
+        <b>Password:</b> ${m.roomPassword || "Not added"}
+    `;
 }
 </script>
 
-</head>
-<body>
-<h2>Lone Wolf Matches</h2>
-<div id="allMatches"></div>
 </body>
 </html>

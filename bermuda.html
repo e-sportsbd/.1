@@ -1,218 +1,289 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Bermuda Matches</title>
 
-<style>
-body { font-family: Arial; background: #0b0b0b; color: #fff; padding: 15px; }
-.matchBox {
-  background: #1c1c1c; padding: 15px; border-radius: 12px;
-  margin-bottom: 15px; border:1px solid #333;
-}
-.btn { background:#ffcc00; padding:10px; width:100%; border:none; margin-top:10px; border-radius:8px; font-weight:bold; }
-.detailsBtn { background:#0099ff; padding:10px; width:100%; border:none; margin-top:10px; border-radius:8px; font-weight:bold; }
-input, select { width:100%; padding:10px; border-radius:8px; border:1px solid #555; margin-bottom:10px; }
-.joinBox { background:#111; padding:10px; border-radius:8px; margin-top:10px; }
-
-.roomBox {
-  background:#101010;
-  padding: 12px;
-  border:1px solid #444;
-  margin-top:10px;
-  border-radius:10px;
-  display:none;
-}
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
-            authDomain: "noreply@post-c7e41.firebaseapp.com",
-            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
-            projectId: "post-c7e41",
-            messagingSenderId: "758133068153",
-            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
-};
+<style>
+body {margin:0;padding:18px;font-family:'Poppins',sans-serif;background:#f3f3f3;}
+.balance-bar {background:#fff;padding:16px;border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,0.08);font-size:18px;font-weight:700;margin-bottom:15px;}
+h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
+.match-card{background:#fff;padding:18px;border-radius:18px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:22px;}
+.match-title{font-size:22px;font-weight:700;margin-bottom:4px;}
+.match-time{font-size:13px;color:#666;margin-bottom:18px;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.info-item{background:#fafafa;padding:12px;border-radius:14px;font-size:14px;border:1px solid #eee;}
+.label{font-size:12px;color:#888;}
+.progress-text{font-size:13px;margin:10px 0;}
+.progress-bar{background:#e2e2e2;height:11px;border-radius:20px;width:100%;overflow:hidden;}
+.progress-inner{height:100%;background:orange;}
+.join-btn,.details-btn{width:100%;padding:13px;border-radius:14px;font-weight:700;border:none;margin-top:12px;font-size:16px;}
+.join-btn{background:orange;color:white;}
+.joined-btn{background:#27ae60;color:white;}
+.deposit-btn{background:#e74c3c;color:white;}
+.details-btn{background:#4a6cf7;color:white;}
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const uid = localStorage.getItem("uid");
-let userBalance = 0;
+.popup-bg{position:fixed;left:0;top:0;width:100%;height:100%;backdrop-filter:blur(3px);background:rgba(0,0,0,0.6);display:none;justify-content:center;align-items:center;z-index:20;}
+.popup-box{width:92%;background:white;padding:20px;border-radius:20px;max-width:420px;}
+.popup-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:20px;}
+.player-input{width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;margin-bottom:12px;font-size:15px;display:none;}
+.popup-join{width:100%;padding:13px;background:orange;color:white;border-radius:14px;font-weight:700;border:none;}
+.popup-cancel{width:100%;padding:13px;background:#ccc;border-radius:14px;border:none;margin-top:10px;font-weight:700;}
 
-// Load user balance
-db.collection("users").doc(uid).onSnapshot(u=>{
-  if(u.exists) userBalance = u.data().balance;
-});
+.room-info{font-size:16px;margin-top:10px;text-align:center;}
+</style>
+</head>
 
-// ===============================
-// LOAD MATCHES
-// ===============================
-window.onload = function(){
-  db.collection("matches")
-  .where("category","==","bermuda")
-  .onSnapshot(ss=>{
-    document.getElementById("allMatches").innerHTML = "";
+<body>
 
-    ss.forEach(doc=>{
-      let m = doc.data();
-      let joined = m.joined ? m.joined.length : 0;
+<div class="balance-bar">
+    Balance: <span id="balance">0</span> ৳
+</div>
 
-      document.getElementById("allMatches").innerHTML += `
-        <div class="matchBox" id="box_${doc.id}">
-          <h3>Match ID: ${doc.id}</h3>
-          <p>Entry Fee: ${m.entry}৳</p>
-          <p>Prize Pool: ${m.prize}৳</p>
-          <p>Match Time: ${m.time}</p>
-          <p>Slot: ${joined}/${m.slot}</p>
+<h2>Bermuda Matches</h2>
 
-          <select id="type_${doc.id}">
-            <option value="solo">Solo (1)</option>
-            <option value="duo">Duo (2)</option>
-            <option value="squad">Squad (4)</option>
-          </select>
+<div id="matchContainer"></div>
 
-          <div id="players_${doc.id}" class="joinBox">
-            <input type="text" placeholder="Player 1 Name">
-          </div>
 
-          <button class="btn" onclick="joinMatch('${doc.id}', ${m.entry}, ${m.slot})">JOIN NOW</button>
+<!-- JOIN POPUP -->
+<div id="joinPopup" class="popup-bg">
+    <div class="popup-box">
+        <div class="popup-title">Select Mode</div>
 
-          <button class="detailsBtn" onclick="toggleDetails('${doc.id}')">DETAILS</button>
-
-          <div class="roomBox" id="room_${doc.id}">
-            <p id="roomText_${doc.id}">Loading...</p>
-          </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:15px;">
+            <label><input type="radio" name="mode" value="Solo"> Solo</label>
+            <label><input type="radio" name="mode" value="Duo"> Duo</label>
+            <label><input type="radio" name="mode" value="Trio"> Trio</label>
+            <label><input type="radio" name="mode" value="Squad" checked> Squad</label>
         </div>
-      `;
 
-      watchRoomChange(doc.id);
-    });
-  });
+        <input id="p1" class="player-input" placeholder="Player 1 Name">
+        <input id="p2" class="player-input" placeholder="Player 2 Name">
+        <input id="p3" class="player-input" placeholder="Player 3 Name">
+        <input id="p4" class="player-input" placeholder="Player 4 Name">
+
+        <button class="popup-join" onclick="submitJoin()">Join Now</button>
+        <button class="popup-cancel" onclick="closePopup()">Cancel</button>
+    </div>
+</div>
+
+
+<!-- DETAILS POPUP -->
+<div id="detailsPopup" class="popup-bg">
+    <div class="popup-box">
+        <div class="popup-title">Match Details</div>
+        <div id="detailsContent" class="room-info"></div>
+
+        <button class="popup-cancel" onclick="closeDetails()">Close</button>
+    </div>
+</div>
+
+
+<script>
+/* FIREBASE CONFIG */
+const firebaseConfig={
+    apiKey:"AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+    authDomain:"post-c7e41.firebaseapp.com",
+    projectId:"post-c7e41"
 };
+firebase.initializeApp(firebaseConfig);
 
-// ===============================
-// AUTO PLAYER INPUT
-// ===============================
-document.addEventListener("change", function(e){
-  if(e.target.tagName === "SELECT"){
-    let id = e.target.id.split("_")[1];
-    let type = e.target.value;
+const db=firebase.firestore();
+const auth=firebase.auth();
 
-    let box = document.getElementById("players_"+id);
-    box.innerHTML = "";
+let userId="";
+let userBalance=0;
+let matchLoaded=false;
 
-    let count = type==="solo"?1 : type==="duo"?2 : 4;
-    for(let i=1;i<=count;i++){
-      box.innerHTML += `<input type="text" placeholder="Player ${i} Name">`;
-    }
-  }
+
+/* AUTH */
+auth.onAuthStateChanged(async user=>{
+    if(!user) return alert("Please Login!");
+    userId=user.uid;
+
+    db.collection("users").doc(userId).onSnapshot(u=>{
+        userBalance=u.data().balance||0;
+        balance.innerText=userBalance;
+
+        if(!matchLoaded){
+            matchLoaded=true;
+            loadBermudaMatches();
+        }
+    });
 });
 
-// ===============================
-// JOIN MATCH
-// ===============================
-function joinMatch(id, entry, maxSlot){
-  db.collection("matches").doc(id).get().then(d=>{
-    let m = d.data();
-    let joined = m.joined ? m.joined.length : 0;
 
-    if(joined >= maxSlot){
-      alert("Slot Full!");
-      return;
-    }
+/* LOAD MATCHES */
+function loadBermudaMatches(){
+    db.collection("bermuda_matches")
+    .orderBy("createdAt","desc")
+    .onSnapshot(snapshot=>{
+        let html="";
 
-    let type = document.getElementById("type_"+id).value;
-    let playerBox = document.querySelectorAll(`#players_${id} input`);
-    let names = [];
-    playerBox.forEach(n=>names.push(n.value));
+        snapshot.forEach(doc=>{
+            let m=doc.data();
 
-    let need = entry * names.length;
-    if(userBalance < need){
-      alert("Balance কম আছে!");
-      return;
-    }
+            let joinCount = m.joinInfo ? m.joinInfo.length : 0;
+            let left = m.slotCount - joinCount;
+            if(left < 0) left = 0;
 
-    db.collection("users").doc(uid).update({
-      balance: userBalance - need
-    });
+            let percent = (joinCount / m.slotCount) * 100;
 
-    db.collection("matches").doc(id).update({
-      joined: firebase.firestore.FieldValue.arrayUnion({
-        uid: uid,
-        players: names,
-        type: type
-      })
-    });
+            let alreadyJoined = m.joinInfo?.some(x => x.uid === userId);
 
-    alert("Match Joined!");
-  });
-}
+            let btnHTML = "";
 
-// ===============================
-// DETAILS SECTION TOGGLE
-// ===============================
-function toggleDetails(id){
-  let box = document.getElementById("room_"+id);
-  box.style.display = box.style.display === "none" ? "block" : "none";
-}
+            if (alreadyJoined) {
+                btnHTML = `<button class="joined-btn" disabled>✔ Joined</button>`;
+            } 
+            else if (left <= 0) {
+                btnHTML = `<button class="joined-btn" disabled>Slot Full</button>`;
+            }
+            else if (userBalance < m.entryFee) {
+                btnHTML = `<button class="deposit-btn" onclick="location.href='deposit.html'">Deposit</button>`;
+            } 
+            else {
+                btnHTML = `<button class="join-btn" onclick="openPopup('${doc.id}',${m.entryFee})">Join</button>`;
+            }
 
-// ===============================
-// WATCH ROOM ID / PASSWORD LIVE
-// ===============================
-function watchRoomChange(matchId){
-  db.collection("matches").doc(matchId).onSnapshot(d=>{
-    let m = d.data();
+            html+=`
+            <div class="match-card">
+                <div class="match-title">${m.matchType}</div>
+                <div class="match-time">${m.matchTime}</div>
 
-    // Check if user joined
-    let isMember = false;
-    if(m.joined){
-      m.joined.forEach(j=>{
-        if(j.uid === uid) isMember = true;
-      });
-    }
+                <div class="info-grid">
+                    <div class="info-item"><span class="label">Entry Fee:</span> ${m.entryFee}</div>
+                    <div class="info-item"><span class="label">Prize:</span> ${m.prizePool}</div>
+                    <div class="info-item"><span class="label">Map:</span> ${m.map}</div>
+                    <div class="info-item"><span class="label">Slots:</span> ${joinCount}/${m.slotCount}</div>
+                </div>
 
-    let box = document.getElementById("roomText_"+matchId);
+                <div class="progress-text">${joinCount} Joined — ${left} Left</div>
+                <div class="progress-bar"><div class="progress-inner" style="width:${percent}%"></div></div>
 
-    if(!isMember){
-      box.innerHTML = "আপনি এই ম্যাচে জয়েন করেননি!";
-      return;
-    }
-
-    if(m.roomId && m.roomPass){
-      box.innerHTML = `
-        <b>Room ID:</b> ${m.roomId}<br>
-        <b>Password:</b> ${m.roomPass}
-      `;
-
-      // NOTIFICATION WHEN ADMIN ADDS ROOM ID/PASS
-      if(Notification.permission === "granted"){
-        new Notification("Room Details Added", {
-          body: `Match ${matchId}: Room ID & Password দেওয়া হয়েছে!`
+                ${btnHTML}
+                <button class="details-btn" onclick="openDetails('${doc.id}')">Details</button>
+            </div>`;
         });
-      }
-    } else {
-      box.innerHTML = "Admin এখনো Room ID & Password দেয়নি!";
-    }
-  });
+
+        matchContainer.innerHTML=html;
+    });
 }
 
-// ===============================
-// ASK NOTIFICATION PERMISSION
-// ===============================
-if(Notification.permission !== "granted"){
-  Notification.requestPermission();
+
+/* JOIN POPUP */
+let currentMatchId="";
+let currentEntryFee=0;
+
+function openPopup(id,fee){
+    currentMatchId=id;
+    currentEntryFee=fee;
+    joinPopup.style.display="flex";
+    updateInputs();
+}
+
+function closePopup(){
+    joinPopup.style.display="none";
+}
+
+
+/* MODE INPUT SHOW/HIDE */
+document.querySelectorAll("input[name='mode']").forEach(i =>
+    i.addEventListener("change", updateInputs)
+);
+
+function updateInputs(){
+    let mode=document.querySelector("input[name='mode']:checked").value;
+
+    p1.style.display=p2.style.display=p3.style.display=p4.style.display="none";
+
+    if(mode==="Solo") p1.style.display="block";
+    if(mode==="Duo") {p1.style.display="block"; p2.style.display="block";}
+    if(mode==="Trio") {p1.style.display="block"; p2.style.display="block"; p3.style.display="block";}
+    if(mode==="Squad") {p1.style.display="block"; p2.style.display="block"; p3.style.display="block"; p4.style.display="block";}
+}
+
+
+/* JOIN MATCH */
+async function submitJoin(){
+    let docCheck=await db.collection("bermuda_matches").doc(currentMatchId).get();
+    let m=docCheck.data();
+
+    if(m.joinInfo && m.joinInfo.some(j=>j.uid===userId)){
+        alert("⚠ You already joined this match!");
+        closePopup();
+        return;
+    }
+
+    let mode=document.querySelector("input[name='mode']:checked").value;
+
+    let players=[];
+    if(mode==="Solo") players=[p1.value.trim()];
+    if(mode==="Duo") players=[p1.value.trim(),p2.value.trim()];
+    if(mode==="Trio") players=[p1.value.trim(),p2.value.trim(),p3.value.trim()];
+    if(mode==="Squad") players=[p1.value.trim(),p2.value.trim(),p3.value.trim(),p4.value.trim()];
+
+    if(players.some(name => name==="")){
+        return alert("⚠ Please enter all player names!");
+    }
+
+    let totalFee=currentEntryFee * players.length;
+
+    if(userBalance < totalFee){
+        return alert("❌ Balance কম! Add Money দিন।");
+    }
+
+    await db.collection("users").doc(userId).update({
+        balance:userBalance - totalFee
+    });
+
+    await db.collection("bermuda_matches").doc(currentMatchId).update({
+        joinInfo:firebase.firestore.FieldValue.arrayUnion({
+            uid:userId,
+            mode:mode,
+            players:players,
+            time:Date.now()
+        })
+    });
+
+    alert("✔ Match Joined Successfully!");
+    closePopup();
+}
+
+
+/* DETAILS POPUP */
+function closeDetails(){
+    detailsPopup.style.display="none";
+}
+
+async function openDetails(id){
+    detailsPopup.style.display="flex";
+    detailsContent.innerHTML="Loading...";
+
+    let doc=await db.collection("bermuda_matches").doc(id).get();
+    let data=doc.data();
+
+    let joined=data.joinInfo?.some(j=>j.uid===userId);
+
+    if(!joined){
+        detailsContent.innerHTML="<b style='color:red;'>❌ You are not joined in this match!</b>";
+        return;
+    }
+
+    detailsContent.innerHTML=`
+        <b>Room ID:</b> ${data.roomId || "Not added"} <br>
+        <b>Password:</b> ${data.roomPassword || "Not added"}
+    `;
 }
 </script>
 
-</head>
-<body>
-<h2>Bermuda Matches</h2>
-<div id="allMatches"></div>
 </body>
 </html>

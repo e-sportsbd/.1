@@ -1,206 +1,241 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Add Money</title>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Add Money — Debug Version</title>
 <style>
-body{
-  font-family: Arial;
-  background:#0a0a0a;
-  color:#fff;
-  margin:0;
-  padding:0;
-}
-.container{
-  max-width:480px;
-  margin:auto;
-  padding:20px;
-}
-
-.card{
-  background:#141414;
-  padding:20px;
-  border-radius:15px;
-  box-shadow:0 0 10px #000;
-}
-
-h2{
-  text-align:center;
-  margin-bottom:15px;
-}
-
-input{
-  width:100%;
-  padding:12px;
-  border-radius:8px;
-  border:1px solid #333;
-  background:#1c1c1c;
-  color:white;
-  margin-top:10px;
-  font-size:16px;
-}
-
-.method-box{
-  display:flex;
-  justify-content:space-between;
-  margin-top:15px;
-}
-
-.method{
-  flex:1;
-  background:#222;
-  padding:12px;
-  margin:5px;
-  text-align:center;
-  border-radius:10px;
-  cursor:pointer;
-  font-size:16px;
-  border:2px solid transparent;
-}
-
-.method.active{
-  border:2px solid #ff0066;
-}
-
-.button{
-  width:100%;
-  padding:14px;
-  background:#ff0066;
-  margin-top:15px;
-  border:none;
-  border-radius:10px;
-  font-size:18px;
-  font-weight:bold;
-  color:white;
-  cursor:pointer;
-}
-
-.copy-btn{
-  padding:10px;
-  background:#333;
-  border:none;
-  border-radius:8px;
-  margin-top:8px;
-  color:#fff;
-  width:100%;
-}
-
-.small{
-  font-size:14px;
-  opacity:0.8;
-  margin-top:10px;
-}
+body{font-family:Arial;background:#0a0a0a;color:#fff;margin:0;padding:0}
+.container{max-width:480px;margin:auto;padding:20px}
+.card{background:#141414;padding:20px;border-radius:12px;box-shadow:0 0 10px #000}
+h2{text-align:center;margin-bottom:12px}
+input{width:100%;padding:12px;border-radius:8px;border:1px solid #333;background:#1c1c1c;color:#fff;margin-top:8px;font-size:15px}
+.method-box{display:flex;gap:8px;margin-top:12px}
+.method{flex:1;padding:12px;border-radius:10px;text-align:center;cursor:pointer;background:#222;border:2px solid transparent}
+.method.active{border-color:#ff0066}
+.copy-btn{width:100%;padding:10px;margin-top:8px;border-radius:8px;background:#333;border:none;color:#fff;cursor:pointer}
+.submit-btn{width:100%;padding:14px;margin-top:12px;border-radius:10px;background:#ff0066;border:none;color:#fff;cursor:pointer;font-weight:700}
+.hint{font-size:13px;opacity:.8;margin-top:10px}
+.bad{color:#ff9999}
+.good{color:#99ff99}
 </style>
 </head>
-
 <body>
 
 <div class="container">
-<div class="card">
+  <div class="card">
+    <h2>Add Money</h2>
 
-<h2>Add Money</h2>
+    <label>Amount</label>
+    <input id="amount" type="number" placeholder="Enter Amount">
 
-<!-- Amount -->
-<label>Amount</label>
-<input id="amount" type="number" placeholder="Enter Amount">
+    <div class="method-box">
+      <div id="bkashTab" class="method active" onclick="setMethod('bkash')">Bkash</div>
+      <div id="nagadTab" class="method" onclick="setMethod('nagad')">Nagad</div>
+    </div>
 
-<!-- Payment Method Tabs -->
-<div class="method-box">
-  <div id="bkashTab" class="method active" onclick="setMethod('bkash')">Bkash</div>
-  <div id="nagadTab" class="method" onclick="setMethod('nagad')">Nagad</div>
+    <label>Send Money To</label>
+    <input id="payNumber" readonly placeholder="Loading number...">
+
+    <button class="copy-btn" onclick="copyNumber()">Copy Number</button>
+
+    <label>Transaction ID</label>
+    <input id="txid" placeholder="Enter Transaction ID">
+
+    <button class="submit-btn" onclick="submitPayment()">Submit Request</button>
+
+    <p class="hint">Admin review করবে এবং balance add হবে।</p>
+
+    <hr style="border:none;border-top:1px solid #222;margin:14px 0">
+
+    <p class="hint">Debug info (open console to see detailed logs)</p>
+    <button onclick="checkDocs()" style="padding:8px;border-radius:8px;border:none;background:#333;color:#fff;cursor:pointer">Check paymentNumbers docs (console)</button>
+  </div>
 </div>
 
-<!-- Payment Number -->
-<label>Send Money To</label>
-<input id="payNumber" readonly>
-
-<button class="copy-btn" onclick="copyNumber()">Copy Number</button>
-
-<!-- TxID -->
-<label>Transaction ID</label>
-<input id="txid" placeholder="Enter Transaction ID">
-
-<button class="button" onclick="submitPayment()">Submit Request</button>
-
-<p class="small">Admin review করবে এবং balance add হবে।</p>
-
-</div>
-</div>
-
-<!-- Firebase -->
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
-// ---------- Firebase Config ----------
+// ========== CONFIG ==========
 const firebaseConfig = {
   apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
-            authDomain: "noreply@post-c7e41.firebaseapp.com",
-            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
-            projectId: "post-c7e41",
-            messagingSenderId: "758133068153",
-            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+  authDomain: "noreply@post-c7e41.firebaseapp.com",
+  databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+  projectId: "post-c7e41",
+  messagingSenderId: "758133068153",
+  appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
 };
-firebase.initializeApp(firebaseConfig);
+
+// initialize
+try {
+  firebase.initializeApp(firebaseConfig);
+  console.log("[INIT] Firebase initialized with project:", firebaseConfig.projectId);
+} catch (e) {
+  console.error("[INIT ERROR] Firebase init failed:", e);
+}
+
 const db = firebase.firestore();
 
-let method = "bkash"; 
-let numbers = { bkash:"", nagad:"" };
+// ========== VARIABLES ==========
+let method = "bkash";
+let numbers = { bkash: null, nagad: null };
 
-// Load numbers
-db.collection("paymentNumbers").doc("bkash").get().then(d=>{
-  if(d.exists){ numbers.bkash = d.data().number; document.getElementById("payNumber").value = numbers.bkash; }
-});
-db.collection("paymentNumbers").doc("nagad").get().then(d=>{
-  if(d.exists){ numbers.nagad = d.data().number; }
-});
+// helper to set visible number and fallback text
+function showNumberForMethod(m){
+  const el = document.getElementById("payNumber");
+  if(numbers[m] && numbers[m].trim() !== ""){
+    el.value = numbers[m];
+    console.log(`[UI] Showing ${m} number:`, numbers[m]);
+  } else {
+    el.value = "";
+    el.placeholder = "Number not set — contact admin";
+    console.warn(`[UI] ${m} number not set in Firestore`);
+  }
+}
 
-// Change Method UI
+// ========== REAL-TIME + initial GET ==========
+function startNumberListeners(){
+  // Try onSnapshot (real-time). Attach error handlers.
+  try {
+    db.collection("paymentNumbers").doc("bkash")
+      .onSnapshot(doc => {
+        if(!doc.exists){
+          console.warn("[SNAPSHOT] bkash doc does not exist");
+          numbers.bkash = null;
+        } else {
+          numbers.bkash = (doc.data() && doc.data().number) ? String(doc.data().number) : null;
+          console.log("[SNAPSHOT] bkash:", numbers.bkash);
+        }
+        if(method === "bkash") showNumberForMethod("bkash");
+      }, err => {
+        console.error("[SNAPSHOT ERROR] bkash:", err);
+      });
+  } catch(e){ console.error("[SNAPSHOT INIT ERROR] bkash:", e); }
+
+  try {
+    db.collection("paymentNumbers").doc("nagad")
+      .onSnapshot(doc => {
+        if(!doc.exists){
+          console.warn("[SNAPSHOT] nagad doc does not exist");
+          numbers.nagad = null;
+        } else {
+          numbers.nagad = (doc.data() && doc.data().number) ? String(doc.data().number) : null;
+          console.log("[SNAPSHOT] nagad:", numbers.nagad);
+        }
+        if(method === "nagad") showNumberForMethod("nagad");
+      }, err => {
+        console.error("[SNAPSHOT ERROR] nagad:", err);
+      });
+  } catch(e){ console.error("[SNAPSHOT INIT ERROR] nagad:", e); }
+
+  // Also do an initial get() for both (helps when onSnapshot fires late)
+  db.collection("paymentNumbers").get()
+    .then(q => {
+      console.log("[GET] paymentNumbers docs count:", q.size);
+      q.forEach(d => console.log(" - doc:", d.id, d.data()));
+      // if bkash doc exists, set numbers (if not set by onSnapshot yet)
+      return Promise.resolve();
+    })
+    .catch(e => console.error("[GET ERROR] paymentNumbers:", e));
+}
+
+// start listeners
+startNumberListeners();
+
+// ========== UI interactions ==========
 function setMethod(m){
   method = m;
-
   document.getElementById("bkashTab").classList.remove("active");
   document.getElementById("nagadTab").classList.remove("active");
   document.getElementById(m+"Tab").classList.add("active");
-
-  document.getElementById("payNumber").value = numbers[m];
+  showNumberForMethod(m);
 }
 
-// Copy number
 function copyNumber(){
-  navigator.clipboard.writeText(document.getElementById("payNumber").value);
-  alert("Copied!");
+  const val = document.getElementById("payNumber").value || document.getElementById("payNumber").placeholder;
+  if(!val || val.includes("not set")){
+    alert("নম্বর সেট করা হয়নি — admin-কে কন্টাক্ট করুন");
+    return;
+  }
+  navigator.clipboard.writeText(val).then(()=> {
+    alert("Copied!");
+  }).catch(err => {
+    console.error("Copy failed:", err);
+    alert("Copy failed — check console");
+  });
 }
 
-// Submit
+// submit
 function submitPayment(){
-  let amount = document.getElementById("amount").value;
-  let txid = document.getElementById("txid").value;
+  const amount = Number(document.getElementById("amount").value);
+  const txid = document.getElementById("txid").value.trim();
+  const chosenNumber = numbers[method];
 
-  if(amount < 10){
-    alert("Minimum 10 TK");
+  if(!amount || amount < 10){
+    alert("Minimum 10 TK দিন");
     return;
   }
-  if(txid.length < 6){
-    alert("Enter valid Transaction ID");
+  if(!txid || txid.length < 4){
+    alert("সঠিক Transaction ID দিন");
+    return;
+  }
+  if(!chosenNumber){
+    alert("Payment নম্বর পাওয়া যায়নি — admin-কে বলুন নম্বর সেট করতে");
     return;
   }
 
+  // save request
   db.collection("addMoney").add({
     amount: amount,
     method: method,
     txid: txid,
-    number: numbers[method],
+    number: chosenNumber,
     status: "pending",
-    time: new Date()
-  }).then(()=>{ 
+    time: firebase.firestore.FieldValue.serverTimestamp()
+  })
+  .then(()=> {
     alert("Request Submitted!");
-    window.location.href = "profile.html";
+    window.location.href = "home.html";
+  })
+  .catch(e => {
+    console.error("AddMoney save error:", e);
+    alert("Request failed — check console for error");
   });
 }
-</script>
 
+// debug helper to list docs (useful to see if docs exist & names)
+function checkDocs(){
+  console.log("=== CHECK paymentNumbers collection ===");
+  db.collection("paymentNumbers").get()
+    .then(snap => {
+      console.log("Docs found:", snap.size);
+      snap.forEach(d => console.log("doc:", d.id, d.data()));
+      if(snap.size === 0) alert("No docs in paymentNumbers — ask admin to create bkash & nagad docs.");
+    })
+    .catch(e => {
+      console.error("checkDocs error:", e);
+      alert("checkDocs error — open console");
+    });
+}
+
+/* ---------- QUICK TROUBLESHOOT LIST (READ THIS) ----------
+If number still doesn't show, open browser console (F12 / DevTools → Console) and check:
+1) Any errors like "permission-denied"? → Firestore rules may require auth.
+2) Any errors like "project not found" or "Failed to fetch"? → Wrong firebaseConfig or network.
+3) If checkDocs() shows zero docs or docs named differently (e.g. "Bkash" vs "bkash"), admin must create docs with exact ids:
+   - collection: paymentNumbers
+     - doc id: bkash  -> { number: "017XXXXXXXX" }
+     - doc id: nagad  -> { number: "018YYYYYYYY" }
+4) If docs exist but fields missing, ensure doc contains { number: "..." }.
+5) If permission-denied, either set your Firestore rules to public for testing OR sign-in before reading (recommended: use admin SDK / secure rules in production).
+
+Admin-side example (run in admin panel) to set numbers:
+db.collection("paymentNumbers").doc("bkash").set({ number: "017XXXXXXXX" });
+db.collection("paymentNumbers").doc("nagad").set({ number: "018YYYYYYYY" });
+
+--------------------------------------------------------- */
+</script>
 </body>
 </html>
