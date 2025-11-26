@@ -11,6 +11,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
 body {margin:0;padding:18px;font-family:'Poppins',sans-serif;background:#f3f3f3;}
@@ -34,7 +35,7 @@ h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
 .popup-bg{position:fixed;left:0;top:0;width:100%;height:100%;backdrop-filter:blur(3px);background:rgba(0,0,0,0.6);display:none;justify-content:center;align-items:center;z-index:20;}
 .popup-box{width:92%;background:white;padding:20px;border-radius:20px;max-width:420px;}
 .popup-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:20px;}
-.popup-join{width:100%;padding:13px;background:orange;color:white;border-radius:14px;font-weight:700;border:none;}
+.popup-join{width:100%;padding:13px;background:orange;color:white;border-radius:14px;font-weight:700;border:none;margin-top:10px;}
 .popup-cancel{width:100%;padding:13px;background:#ccc;border-radius:14px;border:none;margin-top:10px;font-weight:700;}
 .room-info{font-size:16px;margin-top:10px;text-align:center;}
 </style>
@@ -50,19 +51,16 @@ h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
 
 <div id="matchContainer"></div>
 
-
 <!-- JOIN POPUP -->
 <div id="joinPopup" class="popup-bg">
     <div class="popup-box">
         <div class="popup-title" id="popupTitle">Join Match</div>
-
-        <div id="playerFields" style="text-align:center; font-size:16px;"></div>
+        <div id="playerFields" style="text-align:left;font-size:15px;"></div>
 
         <button class="popup-join" onclick="submitJoin()">Join</button>
         <button class="popup-cancel" onclick="closePopup()">Cancel</button>
     </div>
 </div>
-
 
 <!-- DETAILS POPUP -->
 <div id="detailsPopup" class="popup-bg">
@@ -72,45 +70,47 @@ h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
         <button class="popup-cancel" onclick="closeDetails()">Close</button>
     </div>
 </div>
-
-
 <script>
 /* FIREBASE CONFIG */
 const firebaseConfig = {
     apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
-    authDomain: "noreply@post-c7e41.firebaseapp.com",
+    authDomain: "post-c7e41.firebaseapp.com",
     projectId: "post-c7e41",
-    messagingSenderId: "758133068153",
-    appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+    databaseURL:"https://post-c7e41-default-rtdb.firebaseio.com/"
 };
 firebase.initializeApp(firebaseConfig);
 
 const db = firebase.firestore();
+const rtdb = firebase.database();
 const auth = firebase.auth();
 
 let userId = "";
-let userBalance = 0;
+let depositBalance = 0;
+let earnedBalance = 0;
+let totalBalance = 0;
 
 let currentMatchId = "";
 let currentEntryFee = 0;
 let currentPlayerCount = 1;
 
-
-/* AUTH CHECK */
-auth.onAuthStateChanged(async user => {
+/* AUTH → LOAD BALANCE */
+auth.onAuthStateChanged(user => {
     if (!user) return alert("Please Login!");
+
     userId = user.uid;
 
-    // Balance load হলে UI refresh হবে
-    db.collection("users").doc(userId).onSnapshot(u => {
-        userBalance = u.data().balance || 0;
-        balance.innerText = userBalance;
+    rtdb.ref("users/" + userId).on("value", snap => {
+        let u = snap.val() || {};
 
-        // FIX — এখন balance আসার পরে matches রি-লোড হবে
+        depositBalance = Number(u.deposit || 0);
+        earnedBalance  = Number(u.earned  || 0);
+        totalBalance = depositBalance + earnedBalance;
+
+        balance.innerText = totalBalance;
+
         loadMatches();
     });
 });
-
 
 /* LOAD MATCHES */
 function loadMatches() {
@@ -122,33 +122,25 @@ function loadMatches() {
             snapshot.forEach(doc => {
                 let m = doc.data();
 
-                let joined = 0;
-                if (m.joinedPlayers) {
-                    m.joinedPlayers.forEach(p => joined += (p.players || 1));
-                }
-
+                let joined = m.joinedPlayers?.length || 0;
                 let left = m.slotCount - joined;
                 if (left < 0) left = 0;
 
                 let percent = (joined / m.slotCount) * 100;
-                if (percent > 100) percent = 100;
 
-                let alreadyJoined = m.joinedPlayers?.some(x => x.uid === userId);
+                let alreadyJoined =
+                    m.joinedPlayers?.some(x => x.uid === userId);
 
-                let btnHTML = "";
+                let btn = "";
 
-                if (alreadyJoined) {
-                    btnHTML = `<button class="joined-btn" disabled>✔ Joined</button>`;
-                } 
-                else if (left <= 0) {
-                    btnHTML = `<button class="joined-btn" disabled>Slot Full</button>`;
-                }
-                else if (userBalance < m.entryFee) {
-                    btnHTML = `<button class="deposit-btn" onclick="location.href='deposit.html'">Deposit</button>`;
-                } 
-                else {
-                    btnHTML = `<button class="join-btn" onclick="openPopup('${doc.id}', ${m.entryFee}, '${m.matchType}')">Join</button>`;
-                }
+                if (alreadyJoined)
+                    btn = `<button class="joined-btn" disabled>✔ Joined</button>`;
+                else if (left <= 0)
+                    btn = `<button class="joined-btn" disabled>Slot Full</button>`;
+                else if (totalBalance < m.entryFee)
+                    btn = `<button class="deposit-btn" onclick="location.href='deposit.html'">Deposit</button>`;
+                else
+                    btn = `<button class="join-btn" onclick="openPopup('${doc.id}', ${m.entryFee}, '${m.matchType}')">Join</button>`;
 
                 html += `
                 <div class="match-card">
@@ -156,7 +148,7 @@ function loadMatches() {
                     <div class="match-time">${m.matchTime}</div>
 
                     <div class="info-grid">
-                        <div class="info-item"><span class="label">Entry:</span> ${m.entryFee}</div>
+                        <div class="info-item"><span class="label">Entry Fee:</span> ${m.entryFee}</div>
                         <div class="info-item"><span class="label">Prize:</span> ${m.prizePool}</div>
                         <div class="info-item"><span class="label">Map:</span> ${m.map}</div>
                         <div class="info-item"><span class="label">Slots:</span> ${joined}/${m.slotCount}</div>
@@ -164,9 +156,11 @@ function loadMatches() {
 
                     <div class="progress-text">${joined} Joined — ${left} Left</div>
 
-                    <div class="progress-bar"><div class="progress-inner" style="width:${percent}%"></div></div>
+                    <div class="progress-bar">
+                        <div class="progress-inner" style="width:${percent}%"></div>
+                    </div>
 
-                    ${btnHTML}
+                    ${btn}
                     <button class="details-btn" onclick="openDetails('${doc.id}')">Details</button>
                 </div>`;
             });
@@ -175,14 +169,34 @@ function loadMatches() {
         });
 }
 
-
-/* POPUP OPEN */
+/* OPEN JOIN POPUP */
 function openPopup(id, fee, type) {
     currentMatchId = id;
     currentEntryFee = fee;
-    currentPlayerCount = (type === "Duo") ? 2 : 1;
 
-    playerFields.innerHTML = `Players: <b>${currentPlayerCount}</b>`;
+    currentPlayerCount = (type.toUpperCase() === "DUO") ? 2 : 1;
+
+    let fields = "";
+
+    if (currentPlayerCount === 1) {
+        fields = `
+            <label>Player Name:</label>
+            <input id="p1" type="text" placeholder="Enter your name"
+            style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;">
+        `;
+    } else {
+        fields = `
+            <label>Player 1 Name:</label>
+            <input id="p1" type="text" placeholder="Enter player 1 name"
+            style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;">
+
+            <label style="margin-top:10px;display:block;">Player 2 Name:</label>
+            <input id="p2" type="text" placeholder="Enter player 2 name"
+            style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;">
+        `;
+    }
+
+    playerFields.innerHTML = fields;
     popupTitle.innerText = `${type} Join`;
     joinPopup.style.display = "flex";
 }
@@ -191,43 +205,65 @@ function closePopup() {
     joinPopup.style.display = "none";
 }
 
-
 /* JOIN MATCH */
 async function submitJoin() {
-    let docCheck = await db.collection("lonewolf_matches").doc(currentMatchId).get();
-    let m = docCheck.data();
+
+    let name1 = document.getElementById("p1")?.value?.trim();
+    let name2 = (currentPlayerCount === 2) ? document.getElementById("p2")?.value?.trim() : null;
+
+    if (!name1 || (currentPlayerCount === 2 && !name2)) {
+        return alert("Please enter all required names!");
+    }
+
+    let docSnap = await db.collection("lonewolf_matches").doc(currentMatchId).get();
+    let m = docSnap.data();
 
     if (m.joinedPlayers?.some(j => j.uid === userId)) {
-        alert("আপনি ইতিমধ্যে Join করেছেন!");
+        alert("Already Joined!");
         return closePopup();
     }
 
     let totalFee = currentEntryFee * currentPlayerCount;
 
-    if (userBalance < totalFee) return alert("Balance কম!");
+    if (totalBalance < totalFee) return alert("Balance কম!");
 
-    // balance কমানো
-    await db.collection("users").doc(userId).update({
-        balance: userBalance - totalFee
+    let newDeposit = depositBalance;
+    let newEarned  = earnedBalance;
+
+    if (newDeposit >= totalFee) {
+        newDeposit -= totalFee;
+    } else {
+        let rest = totalFee - newDeposit;
+        newDeposit = 0;
+        newEarned -= rest;
+    }
+
+    await rtdb.ref("users/" + userId).update({
+        deposit: newDeposit,
+        earned: newEarned
     });
 
-    // joined add করা
+    let playerData = { 
+        uid: userId, 
+        time: Date.now(), 
+        name1: name1,
+        type: currentPlayerCount === 2 ? "DUO" : "SOLO"
+    };
+
+    if (currentPlayerCount === 2) playerData.name2 = name2;
+
     await db.collection("lonewolf_matches").doc(currentMatchId).update({
-        joinedPlayers: firebase.firestore.FieldValue.arrayUnion({
-            uid: userId,
-            players: currentPlayerCount,
-            time: Date.now()
-        })
+        joinedPlayers: firebase.firestore.FieldValue.arrayUnion(playerData),
+        slotCount: Math.max(0, m.slotCount - currentPlayerCount)
     });
 
     alert("Successfully Joined!");
     closePopup();
 }
 
-
 /* DETAILS */
-function closeDetails() {
-    detailsPopup.style.display = "none";
+function closeDetails() { 
+    detailsPopup.style.display = "none"; 
 }
 
 async function openDetails(id) {
@@ -240,8 +276,7 @@ async function openDetails(id) {
     let joined = m.joinedPlayers?.some(j => j.uid === userId);
 
     if (!joined) {
-        detailsContent.innerHTML =
-            "<b style='color:red;'>❌ আপনি এই ম্যাচে Join করেননি!</b>";
+        detailsContent.innerHTML = "<b style='color:red;'>❌ আপনি Join করেননি!</b>";
         return;
     }
 

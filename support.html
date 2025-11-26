@@ -28,7 +28,6 @@
         font-size: 26px;
     }
 
-    /* FOLLOW BOX */
     .follow-box {
         background: #fff;
         padding: 20px;
@@ -57,7 +56,6 @@
         font-size: 24px;
     }
 
-    /* CONTACT */
     .contact-box {
         text-align: center;
         margin-bottom: 50px;
@@ -67,7 +65,6 @@
         font-size: 15px;
         margin: 5px 0;
     }
-
 </style>
 </head>
 <body>
@@ -78,19 +75,19 @@
 
     <div class="follow-box">
 
-        <div class="item" onclick="window.open('https://t.me/YOUR_TELEGRAM','_blank')">
+        <div class="item" id="telegramBox">
             <div class="icon">📨</div>
-            <div>সমস্যা সমাধান অথবা যেকোনো সাহায্যের জন্য আমাদের Telegram Helpline এ যোগাযোগ করুন।</div>
+            <div>টেলিগ্রাম হেল্পলাইনে যোগাযোগ করুন।</div>
         </div>
 
-        <div class="item" onclick="window.open('https://youtube.com/YOUR_CHANNEL','_blank')">
+        <div class="item" id="youtubeBox">
             <div class="icon">▶️</div>
-            <div>ইউটিউবে আমাদের অফিসিয়াল ভিডিওগুলো দেখতে সাবস্ক্রাইব করুন।</div>
+            <div>আমাদের অফিসিয়াল ইউটিউব চ্যানেল সাবস্ক্রাইব করুন।</div>
         </div>
 
-        <div class="item" onclick="window.open('https://facebook.com/YOUR_PAGE','_blank')">
+        <div class="item" id="facebookBox">
             <div class="icon">📘</div>
-            <div>ফেসবুকে আমাদের অফিসিয়াল পেজটি ফলো করুন আপডেট পেতে।</div>
+            <div>আপডেট পেতে আমাদের ফেসবুক পেজ ফলো করুন।</div>
         </div>
 
     </div>
@@ -98,12 +95,50 @@
     <h2>Contact Us</h2>
 
     <div class="contact-box">
-        <p><b>Email:</b> support@gmail.com</p>
-        <p><b>Phone:</b> +880 1700 000000</p>
-        <p><b>Telegram:</b> https://t.me/your_support</p>
+        <p><b>Email:</b> <span id="emailText"></span></p>
+        <p><b>Phone:</b> <span id="phoneText"></span></p>
+        <p><b>Telegram:</b> <span id="contactTelegram"></span></p>
     </div>
 
 </div>
+
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
+            authDomain: "noreply@post-c7e41.firebaseapp.com",
+            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+            projectId: "post-c7e41",
+            messagingSenderId: "758133068153",
+            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+db.ref("support_page").on("value", snapshot => {
+    if (!snapshot.exists()) return;
+
+    const data = snapshot.val();
+
+    // Follow Section
+    document.getElementById("telegramBox").onclick = () => window.open(data.telegram_link, "_blank");
+    document.getElementById("youtubeBox").onclick = () => window.open(data.youtube_link, "_blank");
+    document.getElementById("facebookBox").onclick = () => window.open(data.facebook_link, "_blank");
+
+    // Contact Section
+    document.getElementById("emailText").innerText = data.contact_email;
+    document.getElementById("phoneText").innerText = data.contact_phone;
+    document.getElementById("contactTelegram").innerText = data.contact_telegram;
+    document.getElementById("contactTelegram").onclick = () => window.open(data.contact_telegram, "_blank");
+
+});
+</script>
 
 </body>
 </html>

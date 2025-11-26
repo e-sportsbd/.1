@@ -18,7 +18,6 @@
         padding: 20px;
         text-align: center;
     }
-
     .card {
         width: 90%;
         max-width: 350px;
@@ -29,7 +28,6 @@
         box-shadow: 0 0 5px rgba(0,0,0,0.1);
         text-align: left;
     }
-
     input, select {
         width: 100%;
         padding: 10px;
@@ -37,7 +35,6 @@
         border: 1px solid #ccc;
         border-radius: 5px;
     }
-
     .btn {
         width: 100%;
         padding: 12px;
@@ -49,17 +46,8 @@
         cursor: pointer;
         margin-top: 10px;
     }
-
-    .btn:hover {
-        opacity: 0.9;
-    }
-
-    .statusBox {
-        text-align: center;
-        margin-top: 10px;
-        font-weight: bold;
-    }
-
+    .btn:hover { opacity: 0.9; }
+    .statusBox { text-align: center; margin-top: 10px; font-weight: bold; }
     .pending { color: orange; }
     .approved { color: green; }
     .rejected { color: red; }
@@ -71,7 +59,7 @@
 <h2>Withdraw</h2>
 
 <div class="card">
-    <p>Available balance : <span id="balance">0</span> BDT</p>
+    <p>Available Earn Money : <span id="earnBalance">0</span> BDT</p>
     <p style="color:red;">Minimum Withdraw : 100 BDT</p>
 
     <input type="number" id="amount" placeholder="Amount">
@@ -92,8 +80,9 @@
     <div id="statusBox" class="statusBox"></div>
 </div>
 
+
 <script>
-// ---------------- Firebase Config ----------------
+// Firebase Config
 const firebaseConfig = {
     apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
     authDomain: "post-c7e41.firebaseapp.com",
@@ -108,73 +97,98 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
-// ---------------- Get User UID ----------------
-let uid = localStorage.getItem("uid");
-if (!uid) {
-    alert("You are not logged in!");
-    window.location.href = "login.html";
-}
 
-// ---------------- Load User Balance ----------------
-db.ref("users/" + uid + "/balance").on("value", snap => {
-    document.getElementById("balance").innerText = snap.val() ?? 0;
-});
-
-// ---------------- Send Withdraw Request (FIXED) ----------------
-function sendWithdraw() {
-    let amount = document.getElementById("amount").value;
-    let method = document.getElementById("method").value;
-    let number = document.getElementById("number").value;
-
-    if (amount < 100) {
-        alert("Minimum withdraw 100 BDT");
-        return;
-    }
-    if (!method || !number) {
-        alert("Please fill all fields");
+auth.onAuthStateChanged(user => {
+    if (!user) {
+        alert("Login Required!");
+        window.location.href = "login.html";
         return;
     }
 
-    let requestId = db.ref().push().key;
+    let uid = user.uid;
 
-    db.ref("withdrawRequests/" + uid + "/" + requestId).set({
-        amount,
-        method,
-        number,
-        status: "pending",
-        date: new Date().toLocaleString()
+    // Load Earn Balance
+    db.ref("users/" + uid + "/earned").on("value", snap => {
+        document.getElementById("earnBalance").innerText = snap.val() ?? 0;
     });
 
-    document.getElementById("statusBox").innerHTML =
-        '<span class="pending">Withdraw Request Submitted (Pending)</span>';
+    // Withdraw Function
+    window.sendWithdraw = function() {
+        let amount = parseInt(document.getElementById("amount").value);
+        let method = document.getElementById("method").value;
+        let number = document.getElementById("number").value;
 
-    // Clear fields
-    document.getElementById("amount").value = "";
-    document.getElementById("number").value = "";
-    document.getElementById("method").value = "";
+        // Input validations
+        if (!amount || amount <= 0) {
+            alert("Enter a valid amount!");
+            return;
+        }
+        if (amount < 100) {
+            alert("Minimum withdraw 100 BDT");
+            return;
+        }
+        if (!method || !number) {
+            alert("Please fill all fields");
+            return;
+        }
 
-    // Redirect to Home Page
-    setTimeout(() => {
-        window.location.href = "home.html";
-    }, 800);
-}
+        // Check balance
+        db.ref("users/" + uid + "/earned").once("value", snap => {
+            let earnBalance = snap.val() ?? 0;
 
-// ---------------- Show Latest Withdraw Status ----------------
-db.ref("withdrawRequests/" + uid)
-  .limitToLast(1)
-  .on("value", snap => {
-    snap.forEach(child => {
-        let status = child.val().status;
+            if (earnBalance <= 0) {
+                alert("You have no earn balance!");
+                return;
+            }
 
-        if (status === "pending")
-            document.getElementById("statusBox").innerHTML = '<span class="pending">Pending</span>';
+            if (amount > earnBalance) {
+                alert("Insufficient Earn Balance!");
+                return;
+            }
 
-        else if (status === "approved")
-            document.getElementById("statusBox").innerHTML = '<span class="approved">Approved</span>';
+            // Deduct
+            db.ref("users/" + uid + "/earned").set(earnBalance - amount);
 
-        else if (status === "rejected")
-            document.getElementById("statusBox").innerHTML = '<span class="rejected">Rejected</span>';
+            // Create Withdraw Request
+            let requestId = db.ref().push().key;
+
+            db.ref("withdrawRequests/" + uid + "/" + requestId).set({
+                amount,
+                method,
+                number,
+                status: "pending",
+                date: new Date().toLocaleString()
+            });
+
+            document.getElementById("statusBox").innerHTML =
+                '<span class="pending">Withdraw Request Submitted (Pending)</span>';
+
+            document.getElementById("amount").value = "";
+            document.getElementById("number").value = "";
+            document.getElementById("method").value = "";
+
+            setTimeout(() => {
+                window.location.href = "home.html";
+            }, 800);
+        });
+    };
+
+    // Show Latest Withdraw Status
+    db.ref("withdrawRequests/" + uid)
+      .limitToLast(1)
+      .on("value", snap => {
+        snap.forEach(child => {
+            let status = child.val().status;
+
+            if (status === "pending")
+                document.getElementById("statusBox").innerHTML = '<span class="pending">Pending</span>';
+            else if (status === "approved")
+                document.getElementById("statusBox").innerHTML = '<span class="approved">Approved</span>';
+            else if (status === "rejected")
+                document.getElementById("statusBox").innerHTML = '<span class="rejected">Rejected</span>';
+        });
     });
+
 });
 </script>
 

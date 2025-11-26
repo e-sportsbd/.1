@@ -11,10 +11,11 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
-body {margin:0;padding:18px;font-family:'Poppins',sans-serif;background:#f3f3f3;}
-.balance-bar {background:#fff;padding:16px;border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,0.08);font-size:18px;font-weight:700;margin-bottom:15px;}
+body{margin:0;padding:18px;font-family:'Poppins',sans-serif;background:#f3f3f3;}
+.balance-bar{background:#fff;padding:16px;border-radius:18px;box-shadow:0 2px 10px rgba(0,0,0,0.08);font-size:18px;font-weight:700;margin-bottom:15px;}
 h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
 .match-card{background:#fff;padding:18px;border-radius:18px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin-bottom:22px;}
 .match-title{font-size:22px;font-weight:700;margin-bottom:4px;}
@@ -25,7 +26,7 @@ h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
 .progress-text{font-size:13px;margin:10px 0;}
 .progress-bar{background:#e2e2e2;height:11px;border-radius:20px;width:100%;overflow:hidden;}
 .progress-inner{height:100%;background:orange;}
-.join-btn,.details-btn{width:100%;padding:13px;border-radius:14px;font-weight:700;border:none;margin-top:12px;font-size:16px;}
+.join-btn,.joined-btn,.deposit-btn,.details-btn{width:100%;padding:13px;border-radius:14px;font-weight:700;border:none;margin-top:12px;font-size:16px;}
 .join-btn{background:orange;color:white;}
 .joined-btn{background:#27ae60;color:white;}
 .deposit-btn{background:#e74c3c;color:white;}
@@ -38,17 +39,16 @@ h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
 .popup-join{width:100%;padding:13px;background:orange;color:white;border-radius:14px;font-weight:700;border:none;}
 .popup-cancel{width:100%;padding:13px;background:#ccc;border-radius:14px;border:none;margin-top:10px;font-weight:700;}
 
-.room-info{font-size:16px;margin-top:10px;text-align:center;}
+.room-info{text-align:center;font-size:16px;margin-top:10px;}
 </style>
 </head>
 
 <body>
 
-<div class="balance-bar">
-    Balance: <span id="balance">0</span> ৳
-</div>
+<div class="balance-bar">Balance: <span id="balance">0</span> ৳</div>
 
 <h2>CS Matches</h2>
+
 <div id="matchContainer"></div>
 
 <!-- JOIN POPUP -->
@@ -57,9 +57,10 @@ h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
         <div class="popup-title">Select Mode</div>
 
         <div style="display:flex;justify-content:space-between;margin-bottom:15px;">
-            <label><input type="radio" name="mode" value="solo" checked> Solo</label>
-            <label><input type="radio" name="mode" value="duo"> Duo</label>
-            <label><input type="radio" name="mode" value="squad"> Squad</label>
+            <label><input type="radio" name="mode" value="Solo"> Solo</label>
+            <label><input type="radio" name="mode" value="Duo"> Duo</label>
+            <label><input type="radio" name="mode" value="Trio"> Trio</label>
+            <label><input type="radio" name="mode" value="Squad" checked> Squad</label>
         </div>
 
         <input id="p1" class="player-input" placeholder="Player 1 Name">
@@ -77,7 +78,6 @@ h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
     <div class="popup-box">
         <div class="popup-title">Match Details</div>
         <div id="detailsContent" class="room-info"></div>
-
         <button class="popup-cancel" onclick="closeDetails()">Close</button>
     </div>
 </div>
@@ -87,31 +87,52 @@ h2{text-align:center;font-weight:700;margin-bottom:18px;color:#222;}
 const firebaseConfig={
     apiKey:"AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
     authDomain:"post-c7e41.firebaseapp.com",
-    projectId:"post-c7e41"
+    projectId:"post-c7e41",
+    databaseURL:"https://post-c7e41-default-rtdb.firebaseio.com"
 };
 firebase.initializeApp(firebaseConfig);
 
 const db=firebase.firestore();
 const auth=firebase.auth();
+const rtdb=firebase.database();
 
 let userId="";
-let userBalance=0;
+let depositBalance=0;
+let earnedBalance=0;
+let totalBalance=0;
+let matchLoaded=false;
 
-/* AUTH — FIRST LOAD BALANCE THEN MATCHES */
+/* LOAD BALANCE */
 auth.onAuthStateChanged(async user=>{
-    if(!user) return alert("Please Login!");
+    if(!user){
+        alert("Please login!");
+        return;
+    }
+
     userId=user.uid;
 
-    db.collection("users").doc(userId).onSnapshot(u=>{
-        userBalance = u.data().balance || 0;
-        balance.innerText = userBalance;
+    rtdb.ref("users/"+userId+"/deposit").on("value", snap=>{
+        depositBalance = snap.val() || 0;
+        updateTotal();
+    });
 
-        /* load matches AFTER balance */
-        loadCSMatches();
+    rtdb.ref("users/"+userId+"/earned").on("value", snap=>{
+        earnedBalance = snap.val() || 0;
+        updateTotal();
     });
 });
 
-/* LOAD MATCHES */
+function updateTotal(){
+    totalBalance = depositBalance + earnedBalance;
+    balance.innerText = totalBalance;
+
+    if(!matchLoaded){
+        matchLoaded=true;
+        loadCSMatches();
+    }
+}
+
+/* LOAD MATCHES (Same like Bermuda) */
 function loadCSMatches(){
     db.collection("cs_matches")
     .orderBy("createdAt","desc")
@@ -121,41 +142,44 @@ function loadCSMatches(){
         snapshot.forEach(doc=>{
             let m=doc.data();
 
-            let joined=m.joinedPlayers?m.joinedPlayers.length:0;
-            let left=m.slotCount-joined;
-            let percent=(joined/m.slotCount)*100;
+            let usedSlots = 0;
 
-            let alreadyJoined=m.joinedPlayers?.some(x=>x.uid===userId);
-
-            let btnHTML="";
-
-            if(alreadyJoined){
-                btnHTML=`<button class="joined-btn" disabled>✔ Joined</button>`;
-            }
-            else if(userBalance < m.entryFee){
-                btnHTML=`<button class="deposit-btn" onclick="location.href='deposit.html'">Deposit</button>`;
-            }
-            else{
-                btnHTML=`<button class="join-btn" onclick="openPopup('${doc.id}',${m.entryFee})">Join</button>`;
+            if(m.joinInfo){
+                m.joinInfo.forEach(j=>{
+                    usedSlots += j.slotsUsed || 1;
+                });
             }
 
-            html += `
+            let left = m.slotCount - usedSlots;
+            let percent = (usedSlots / m.slotCount) * 100;
+
+            let alreadyJoined = m.joinInfo?.some(x=>x.uid===userId);
+
+            let btnHTML = "";
+
+            if (alreadyJoined)
+                btnHTML = `<button class="joined-btn" disabled>✔ Joined</button>`;
+            else if (left <= 0)
+                btnHTML = `<button class="joined-btn" disabled>Slot Full</button>`;
+            else if (totalBalance < m.entryFee)
+                btnHTML = `<button class="deposit-btn" onclick="location.href='deposit.html'">Deposit</button>`;
+            else
+                btnHTML = `<button class="join-btn" onclick="openPopup('${doc.id}',${m.entryFee})">Join</button>`;
+
+            html+=`
             <div class="match-card">
-                <div class="match-title">Match ID: ${doc.id}</div>
+                <div class="match-title">${m.matchType}</div>
                 <div class="match-time">${m.matchTime}</div>
 
                 <div class="info-grid">
-                    <div class="info-item"><span class="label">Entry:</span> ${m.entryFee}</div>
+                    <div class="info-item"><span class="label">Entry Fee:</span> ${m.entryFee}</div>
                     <div class="info-item"><span class="label">Prize:</span> ${m.prizePool}</div>
                     <div class="info-item"><span class="label">Map:</span> ${m.map}</div>
-                    <div class="info-item"><span class="label">Slots:</span> ${joined}/${m.slotCount}</div>
+                    <div class="info-item"><span class="label">Slots:</span> ${usedSlots}/${m.slotCount}</div>
                 </div>
 
-                <div class="progress-text">${joined} Joined — ${left} Left</div>
-
-                <div class="progress-bar">
-                    <div class="progress-inner" style="width:${percent}%"></div>
-                </div>
+                <div class="progress-text">${usedSlots} Joined — ${left} Left</div>
+                <div class="progress-bar"><div class="progress-inner" style="width:${percent}%"></div></div>
 
                 ${btnHTML}
                 <button class="details-btn" onclick="openDetails('${doc.id}')">Details</button>
@@ -166,7 +190,7 @@ function loadCSMatches(){
     });
 }
 
-/* POPUP */
+/* JOIN POPUP */
 let currentMatchId="";
 let currentEntryFee=0;
 
@@ -181,9 +205,8 @@ function closePopup(){
     joinPopup.style.display="none";
 }
 
-/* SHOW INPUT FIELDS BY MODE */
-document.querySelectorAll("input[name='mode']").forEach(i=>
-    i.addEventListener("change",updateInputs)
+document.querySelectorAll("input[name='mode']").forEach(i =>
+    i.addEventListener("change", updateInputs)
 );
 
 function updateInputs(){
@@ -191,18 +214,19 @@ function updateInputs(){
 
     p1.style.display=p2.style.display=p3.style.display=p4.style.display="none";
 
-    if(mode==="solo") p1.style.display="block";
-    if(mode==="duo"){ p1.style.display="block"; p2.style.display="block"; }
-    if(mode==="squad"){ p1.style.display="block"; p2.style.display="block"; p3.style.display="block"; p4.style.display="block"; }
+    if(mode==="Solo") p1.style.display="block";
+    if(mode==="Duo"){ p1.style.display="block"; p2.style.display="block"; }
+    if(mode==="Trio"){ p1.style.display="block"; p2.style.display="block"; p3.style.display="block"; }
+    if(mode==="Squad"){ p1.style.display="block"; p2.style.display="block"; p3.style.display="block"; p4.style.display="block"; }
 }
 
-/* JOIN MATCH */
+/* JOIN SYSTEM */
 async function submitJoin(){
-    let docCheck=await db.collection("cs_matches").doc(currentMatchId).get();
-    let m=docCheck.data();
+    let match=await db.collection("cs_matches").doc(currentMatchId).get();
+    let m=match.data();
 
-    if(m.joinedPlayers && m.joinedPlayers.some(j=>j.uid===userId)){
-        alert("⚠ আপনি ইতিমধ্যেই Joined!");
+    if(m.joinInfo && m.joinInfo.some(j=>j.uid===userId)){
+        alert("Already Joined!");
         closePopup();
         return;
     }
@@ -210,34 +234,50 @@ async function submitJoin(){
     let mode=document.querySelector("input[name='mode']:checked").value;
 
     let players=[];
-    if(mode==="solo") players=[p1.value.trim()];
-    if(mode==="duo") players=[p1.value.trim(),p2.value.trim()];
-    if(mode==="squad") players=[p1.value.trim(),p2.value.trim(),p3.value.trim(),p4.value.trim()];
+    if(mode==="Solo")  players=[p1.value.trim()];
+    if(mode==="Duo")   players=[p1.value.trim(), p2.value.trim()];
+    if(mode==="Trio")  players=[p1.value.trim(), p2.value.trim(), p3.value.trim()];
+    if(mode==="Squad") players=[p1.value.trim(), p2.value.trim(), p3.value.trim(), p4.value.trim()];
 
-    if(players.some(n=>n==="")){
-        return alert("⚠ সব Player Name লিখুন!");
+    if(players.some(n=>n==="")) return alert("Enter all player names!");
+
+    let slotsToUse = players.length;
+
+    let usedSlots = m.usedSlots || 0;
+
+    if((m.slotCount - usedSlots) < slotsToUse){
+        alert("Not enough slots left!");
+        return;
     }
 
     let totalFee=currentEntryFee * players.length;
 
-    if(userBalance < totalFee){
-        return alert("❌ পর্যাপ্ত ব্যালেন্স নেই!");
+    if(totalBalance < totalFee){
+        return alert("Balance কম! Add Money দিন।");
     }
 
-    await db.collection("users").doc(userId).update({
-        balance: firebase.firestore.FieldValue.increment(-totalFee)
-    });
+    let remaining = totalFee;
+
+    if(depositBalance >= remaining){
+        await rtdb.ref("users/"+userId+"/deposit").set(depositBalance - remaining);
+    } else {
+        remaining -= depositBalance;
+        await rtdb.ref("users/"+userId+"/deposit").set(0);
+        await rtdb.ref("users/"+userId+"/earned").set(earnedBalance - remaining);
+    }
 
     await db.collection("cs_matches").doc(currentMatchId).update({
-        joinedPlayers: firebase.firestore.FieldValue.arrayUnion({
+        joinInfo: firebase.firestore.FieldValue.arrayUnion({
             uid:userId,
             mode:mode,
             players:players,
-            time:Date.now()
-        })
+            time:Date.now(),
+            slotsUsed:slotsToUse
+        }),
+        usedSlots: firebase.firestore.FieldValue.increment(slotsToUse)
     });
 
-    alert("✔ ম্যাচ Join সম্পন্ন!");
+    alert("Joined Successfully!");
     closePopup();
 }
 
@@ -251,18 +291,18 @@ async function openDetails(id){
     detailsContent.innerHTML="Loading...";
 
     let doc=await db.collection("cs_matches").doc(id).get();
-    let m=doc.data();
+    let data=doc.data();
 
-    let joined=m.joinedPlayers?.some(j=>j.uid===userId);
+    let joined=data.joinInfo?.some(j=>j.uid===userId);
 
     if(!joined){
-        detailsContent.innerHTML="<b style='color:red;'>❌ আপনি Joined নন!</b>";
+        detailsContent.innerHTML="<b style='color:red;'>You are not joined!</b>";
         return;
     }
 
     detailsContent.innerHTML=`
-        <b>Room ID:</b> ${m.roomId || "Not added"} <br>
-        <b>Password:</b> ${m.roomPassword || "Not added"}
+        <b>Room ID:</b> ${data.roomId || "Not added"} <br>
+        <b>Password:</b> ${data.roomPassword || "Not added"}
     `;
 }
 </script>

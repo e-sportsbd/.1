@@ -263,26 +263,24 @@
     /* FIREBASE CONFIG */
     const firebaseConfig = {
       apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
-            authDomain: "noreply@post-c7e41.firebaseapp.com",
-            databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
-            projectId: "post-c7e41",
-            messagingSenderId: "758133068153",
-            appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
+      authDomain: "noreply@post-c7e41.firebaseapp.com",
+      databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+      projectId: "post-c7e41",
+      messagingSenderId: "758133068153",
+      appId: "1:758133068153:web:28ef27e45d8037e0d49fa8"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    /* DRAWER TOGGLE */
+    /* DRAWER */
     function toggleDrawer(){
       document.getElementById("drawer").classList.toggle("open");
     }
 
     function openPage(p){ window.location.href = p; }
 
-    function logout(){
-      alert("Logged out!");
-    }
+    function logout(){ alert("Logged out!"); }
 
     /* BANNER SLIDER */
     let index = 0;
@@ -295,23 +293,37 @@
     }, 2500);
 
 
-    /* MATCH COUNT */
+    /* ============= LIVE MATCH COUNT (AUTO UPDATE) ============= */
+
     function loadCounts(){
-      db.collection("matches").doc("classic").get().then(d=>{
-        if(d.exists) document.getElementById("classic_count").innerText = d.data().count + " Matches";
-      });
 
-      db.collection("matches").doc("clash").get().then(d=>{
-        if(d.exists) document.getElementById("clash_count").innerText = d.data().count + " Matches";
-      });
+      // Bermuda Matches
+      db.collection("bermuda_matches")
+        .onSnapshot(snap=>{
+          document.getElementById("classic_count").innerText =
+            snap.size + " Matches";
+        });
 
-      db.collection("matches").doc("wolf").get().then(d=>{
-        if(d.exists) document.getElementById("wolf_count").innerText = d.data().count + " Matches";
-      });
+      // CS Matches
+      db.collection("cs_matches")
+        .onSnapshot(snap=>{
+          document.getElementById("clash_count").innerText =
+            snap.size + " Matches";
+        });
 
-      db.collection("matches").doc("ludu").get().then(d=>{
-        if(d.exists) document.getElementById("ludu_count").innerText = d.data().count + " Matches";
-      });
+      // Lone Wolf Matches
+      db.collection("lonewolf_matches")
+        .onSnapshot(snap=>{
+          document.getElementById("wolf_count").innerText =
+            snap.size + " Matches";
+        });
+
+      // Ludu Matches
+      db.collection("ludu_matches")
+        .onSnapshot(snap=>{
+          document.getElementById("ludu_count").innerText =
+            snap.size + " Matches";
+        });
     }
 
     loadCounts();

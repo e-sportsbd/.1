@@ -42,11 +42,14 @@ body{
     display:flex;
     align-items:center;
     justify-content:center;
+    overflow:hidden;
     border:4px solid #fff;
+    cursor:pointer;
 }
 .profile-icon-box img{
-    width:60px;
-    opacity:.7;
+    width:100%;
+    height:100%;
+    object-fit:cover;
 }
 
 /* ---------- Main Card ---------- */
@@ -141,10 +144,11 @@ th{
 <!-- Banner -->
 <div class="banner"></div>
 
-<!-- Profile Icon -->
-<div class="profile-icon-box">
-    <img src="https://i.ibb.co/Vwz6SfT/user.png">
+<!-- Profile Photo Upload -->
+<div class="profile-icon-box" onclick="document.getElementById('photoInput').click()">
+    <img id="profilePhoto" src="https://i.ibb.co/Vwz6SfT/user.png">
 </div>
+<input type="file" id="photoInput" accept="image/*" style="display:none;">
 
 <!-- Profile Card -->
 <div class="card">
@@ -189,6 +193,8 @@ th{
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <script>
 // Firebase Init
@@ -196,11 +202,15 @@ const firebaseConfig = {
     apiKey: "AIzaSyBl0PIm4lvZea96Bte3KaKQJvurGE1P8Es",
     authDomain: "post-c7e41.firebaseapp.com",
     projectId: "post-c7e41",
+    databaseURL: "https://post-c7e41-default-rtdb.firebaseio.com",
+    storageBucket: "post-c7e41.appspot.com"
 };
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+const rtdb = firebase.database();
+const storage = firebase.storage();
 
 function openDeposit(){
     window.location.href = "add_money.html";
@@ -212,24 +222,37 @@ auth.onAuthStateChanged(user=>{
 
     document.getElementById("email").innerText = user.email;
 
-    // Generate Support Pin (last 6 of uid)
-    const pin = user.uid.slice(-6);
-    document.getElementById("supportPin").innerText = pin;
+    // Support PIN
+    document.getElementById("supportPin").innerText = user.uid.slice(-6);
 
+    // Join Date
     const date = new Date(user.metadata.creationTime);
     document.getElementById("joindate").innerText =
         "Joined on " + date.toLocaleDateString();
 
+    // Load profile data (name + photo)
     db.collection("users").doc(user.uid).onSnapshot(doc=>{
-        if(!doc.exists) return;
-        let d = doc.data();
+        if(doc.exists){
+            let data = doc.data();
+            document.getElementById("name").innerText = data.name || "No Name";
 
-        document.getElementById("name").innerText = d.name || "No Name";
-        document.getElementById("balance").innerText = d.balance || 0;
-        document.getElementById("earn").innerText = d.earn || 0;
+            if(data.photoURL){
+                document.getElementById("profilePhoto").src = data.photoURL;
+            }
+        }
     });
 
-    // Load all transactions
+    // Earn balance from RTDB
+    rtdb.ref("users/"+user.uid+"/earned").on("value", snap=>{
+        document.getElementById("earn").innerText = snap.val() || 0;
+    });
+
+    // Deposit balance
+    rtdb.ref("users/"+user.uid+"/deposit").on("value", snap=>{
+        document.getElementById("balance").innerText = snap.val() || 0;
+    });
+
+    // Transactions from Firestore
     db.collection("transactions")
         .where("uid","==",user.uid)
         .orderBy("time","desc")
@@ -257,7 +280,7 @@ auth.onAuthStateChanged(user=>{
 
             snap.forEach(tx=>{
                 let t = tx.data();
-                let tr = `
+                table.innerHTML += `
                     <tr>
                         <td>${t.type}</td>
                         <td>${t.amount}৳</td>
@@ -265,9 +288,37 @@ auth.onAuthStateChanged(user=>{
                         <td>${new Date(t.time).toLocaleString()}</td>
                     </tr>
                 `;
-                table.innerHTML += tr;
             });
         });
+});
+
+// -------------------------
+// ⭐ PHOTO UPLOAD SYSTEM
+// -------------------------
+document.getElementById("photoInput").addEventListener("change", function(){
+    let file = this.files[0];
+    let user = auth.currentUser;
+
+    if(!file || !user) return;
+
+    let path = "profilePhotos/" + user.uid + ".jpg";
+    let uploadTask = storage.ref(path).put(file);
+
+    uploadTask.on("state_changed",
+        ()=>{},
+        ()=> alert("Upload failed"),
+        ()=>{
+            uploadTask.snapshot.ref.getDownloadURL().then(url=>{
+                // Save the URL to Firestore
+                db.collection("users").doc(user.uid).update({
+                    photoURL: url
+                });
+
+                // Update UI
+                document.getElementById("profilePhoto").src = url;
+            });
+        }
+    );
 });
 </script>
 
